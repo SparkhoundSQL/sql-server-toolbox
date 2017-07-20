@@ -1,0 +1,36 @@
+USE [master]
+GO
+EXEC sp_configure filestream_access_level, 2
+RECONFIGURE
+Go
+USE [master]
+GO
+ALTER DATABASE [w] ADD FILEGROUP [BLOBFiles] CONTAINS FILESTREAM 
+GO
+ALTER DATABASE [w] ADD FILE ( NAME = N'BLOBFiles', FILENAME = N'E:\BLOBFiles\' ) TO FILEGROUP [BLOBFiles]
+GO
+ALTER DATABASE w
+SET FILESTREAM (NON_TRANSACTED_ACCESS = FULL, DIRECTORY_NAME = N'BLOBFiles')
+GO
+USE w
+GO
+CREATE TABLE e_BLOBFiles_filetable AS FILETABLE
+  WITH
+  (
+    FILETABLE_DIRECTORY = 'BLOBFiles'
+  )
+GO
+select * from e_BLOBFiles_filetable
+
+/*
+USE [w]
+GO
+drop table e_BLOBFiles_filetable 
+GO
+ALTER DATABASE [w]  REMOVE FILE [BLOBFiles]
+GO
+ALTER DATABASE [w] REMOVE FILEGROUP [BLOBFiles]
+GO
+
+*/
+
