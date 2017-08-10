@@ -1,18 +1,6 @@
 
 SELECT @@SERVERNAME
 
---Server level roles
-SELECT	DISTINCT
-	QUOTENAME(r.name) as server_role_name, r.type_desc, QUOTENAME(m.name) as principal_name, m.type_desc 
-,	CreateTSQL	= 'ALTER SERVER ROLE [' + r.name + '] ADD MEMBER [' + m.name + ']'
-,	DropTSQL	= 'ALTER SERVER ROLE [' + r.name + '] DROP MEMBER [' + m.name + ']'
-FROM	sys.server_role_members AS rm
-inner join sys.server_principals r on rm.role_principal_id = r.principal_id
-inner join sys.server_principals m on rm.member_principal_id = m.principal_id
-where r.is_disabled = 0 and m.is_disabled = 0
-and m.name = 'public'
-order by QUOTENAME(r.name)
-
 
 --Server Level Security
 SELECT rm.state_desc, rm.permission_name, principal_name = QUOTENAME(u.name),  u.type_desc
@@ -36,16 +24,6 @@ order by rm.permission_name, u.name
 
 --Database role membership
 
---Single Database
---Run on each database for database-level security.
-SELECT DB_NAME();
-SELECT DISTINCT	QUOTENAME(r.name) as database_role_name, r.type_desc, QUOTENAME(d.name) as principal_name, d.type_desc
-,	Add_TSQL = 'EXEC sp_addrolemember @membername = N''' + d.name COLLATE DATABASE_DEFAULT + ''', @rolename = N''' + r.name + ''''
-,	Drop_TSQL = 'EXEC sp_droprolemember @membername = N''' + d.name COLLATE DATABASE_DEFAULT + ''', @rolename = N''' + r.name + ''''
-FROM	sys.database_role_members rm
-inner join sys.database_principals r on rm.role_principal_id = r.principal_id
-inner join sys.database_principals d on rm.member_principal_id = d.principal_id
-where d.name = 'public'
 /*
 --Multi Database
 declare @tsql nvarchar(4000) = 'use [?]; 
