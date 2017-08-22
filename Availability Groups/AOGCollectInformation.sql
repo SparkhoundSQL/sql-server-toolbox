@@ -49,7 +49,7 @@ select
 	,drcs.database_name
 	,drs.database_state_desc
 	,drs.filestream_send_rate
-	,drs.is_primary_replica
+	,drs.is_primary_replica -- SQL 2014+
 	,case when drcs.is_database_joined = 1 then 'True' else 'False' end as [is_database_joined]
 	,case when drcs.is_failover_ready =1 then 'True' else 'False' end as [is_failover_read]
 	,case when drcs.is_pending_secondary_suspend=1 then 'True' else 'False' end as [is_pending_secondary_suspend]
