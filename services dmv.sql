@@ -9,6 +9,10 @@ SELECT servicename -- Ex: SQL Server (SQL2K8R2)
 , is_clustered -- Y/N
 , cluster_nodename
 FROM sys.dm_server_services
+
+--The Browser is NOT listed
+
+
 /*
 -- This works prior to SQL 2008 R2 SP1 
 DECLARE @DBEngineLogin VARCHAR(100)

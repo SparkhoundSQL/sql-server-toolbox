@@ -102,7 +102,7 @@ CREATE TABLE [dbo].[worstqueries](
 	[total_physical_reads] [bigint] NOT NULL,
 	[total_logical_writes] [bigint] NOT NULL,
 	[total_logical_reads] [bigint] NOT NULL,
-	[last_execution_time] [datetime2] NULL,
+	[last_execution_time] [datetimeoffset] NULL,
 	[dbname] [nvarchar](128) NULL,
 	[objectid] [int] NULL,
 	[procname] [nvarchar](75) NULL,
@@ -111,7 +111,7 @@ CREATE TABLE [dbo].[worstqueries](
 	[QueryPlan] [xml] NULL,
 	[Average_cpu] [decimal](38, 19) NULL,
 	[Average_Duration] [decimal](38, 19) NULL,
-	[ObservedWhen] [datetime2](2) NOT NULL CONSTRAINT DF_worstqueries_ObservedWhen DEFAULT (sysdatetime())
+	[ObservedWhen] [datetimeoffset] NOT NULL CONSTRAINT DF_worstqueries_ObservedWhen DEFAULT (SYSDATETIMEOFFSET())
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 

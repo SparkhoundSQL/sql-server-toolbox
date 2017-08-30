@@ -1,27 +1,6 @@
 /*=====================================================================
-AUTHOR:    trayce@seekwellandprosper.com
-FILENAME:  Get_AOHealth_XEvents.sql
-VERSION:	1.2
-NOTES:
-
-TABLES OUTPUT
-==============
-    TempDB.dbo.#error_reported	      --used for stats of error/info messages
-    TempDB.dbo.#AOHealth_XELData      --imported Xevents from AlwaysOn_Health_*.XEL files
-
-CHANGE HISTORY:
----------------------------
-2017/03/23  version 1.2		changed logic to find target files
-							changed where clauses to use object_name
-							only return XEvents that are found
-							added summary table of events & their counts
-							if no AO Health session found, print msg, exit
-							if target path not found, print msg, exit
-							wrapped IsNull around a value that is NULL in SQL 2012
-
-2017/02/20	version 1.1		changed various casts to avoid trimming
-2017/01/18	Initial revision
-======================================================================*/
+original AUTHOR:    trayce@seekwellandprosper.com
+*/
 SET NOCOUNT ON
 USE [TempDB]
 GO
@@ -127,7 +106,7 @@ IF EXISTS(SELECT * FROM #error_reported) BEGIN
 		 FROM
 		ErrorCTE ec LEFT JOIN sys.messages m on ec.ErrorNum = m.message_id
 		and m.language_id = 1033
-	order by ErrorCount DESC
+	order by ErrorCount DESC, LastDate DESC 
 END
 
 IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'alwayson_ddl_executed')
@@ -195,12 +174,12 @@ BEGIN
 	PRINT 'Availability Replica Manager state changes'
 	PRINT '==========================================';
 	-- display results for "availability_replica_manager_state_change" events
-	SELECT cast(object_name as varchar(42)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+	SELECT cast(object_name as varchar(42)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetimeoffset') AS TimeStampUTC,
 		EventData.value('(event/data[@name="current_state"]/value)[1]', 'int') AS current_state,
 		EventData.value('(event/data[@name="current_state"]/text)[1]', 'varchar(30)') AS current_state_desc
 		FROM #AOHealth_XELData
 		WHERE object_name = 'availability_replica_manager_state_change'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime');
+		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetimeoffset') desc;
 END
 
 
@@ -225,7 +204,7 @@ BEGIN
 	PRINT 'Availability Replica state changes'
 	PRINT '==================================';
 	-- display results for "availability_replica_state_change" events
-	SELECT cast(object_name as varchar(34)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+	SELECT cast(object_name as varchar(34)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetimeoffset') AS TimeStampUTC,
 		IsNULL(EventData.value('(event/data[@name="availability_replica_name"]/value)[1]', 'varchar(25)'), 'Data Unavailable') AS availability_replica_name,
 		EventData.value('(event/data[@name="availability_group_name"]/value)[1]', 'varchar(25)') AS availability_group_name,
 		EventData.value('(event/data[@name="previous_state"]/value)[1]', 'int') AS previous_state,
@@ -236,7 +215,7 @@ BEGIN
 		EventData.value('(event/data[@name="availability_group_id"]/value)[1]', 'varchar(36)') AS availability_group_id
 		FROM #AOHealth_XELData
 		WHERE object_name = 'availability_replica_state_change'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime');
+		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime') DESC;
 END
 
 IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'availability_group_lease_expired')

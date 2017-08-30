@@ -10,4 +10,5 @@ select
 ,	is_auto_update_stats_on	--should be 1 except for some SharePoint db's
 ,	state_desc				
 ,	recovery_model_Desc
+,	page_verify_option_Desc
  from sys.databases

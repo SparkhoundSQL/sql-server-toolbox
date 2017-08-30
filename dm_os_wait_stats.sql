@@ -22,44 +22,26 @@ order by Pct desc
 drop table dbaadmin.dbo.sys_dm_os_wait_stats 
 
 create table dbaadmin.dbo.sys_dm_os_wait_stats 
-(	id int not null primary key IDENTITY(1,1)
-,	datecapture datetime2(2)
-,	wait_Type nvarchar(512)
-,	wait_time_s  decimal(19,1)
-,	Pct decimal(9,1) 
+(	id int not null IDENTITY(1,1) 
+,	datecapture datetimeoffset(2) not null
+,	wait_Type nvarchar(512) not null
+,	wait_time_s  decimal(19,1) not null 
+,	Pct decimal(9,1)  not null
+,	CONSTRAINT PK_sys_dm_os_wait_stats PRIMARY KEY CLUSTERED (id)
 )
 
 insert into dbaadmin.dbo.sys_dm_os_wait_stats  (datecapture, wait_type,	wait_time_s, Pct)
 select top 100
-	datecapture =	convert(datetime2(2), getdate())
+	datecapture =	SYSDATETIMEOFFSET()
 ,	wait_type
 ,	wait_time_s =	convert(decimal(19,1), round( wait_time_ms / 1000.0,1))
 ,	Pct			=	wait_time_ms/sum(wait_time_ms) OVER() 
 from sys.dm_os_wait_stats wt
 Where round(wait_time_ms,0) > 0.0
 order by wait_time_s
-
+GO
 DBCC SQLPERF ('sys.dm_os_wait_stats', CLEAR);
 go
-
-declare @x int = 1
-while (@x<30)
-Begin
-	insert into dbaadmin.dbo.sys_dm_os_wait_stats (datecapture, wait_type, wait_time_s)
-	select 
-		datecapture = dateadd(day, -@x, datecapture)
-	,	wait_type
-	,	wait_time_s = wait_time_s - ((.1 * @x) * wait_time_s)
-	 from dbaadmin.dbo.sys_dm_os_wait_stats where id <= 31
-	set @x = @x +1
-
-	DBCC SQLPERF ('sys.dm_os_wait_stats', CLEAR);
-
-END
-
-
-
-
 
 */
 /*

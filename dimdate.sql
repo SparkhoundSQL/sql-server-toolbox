@@ -1,4 +1,4 @@
---use w
+use w
 go
 DROP TABLE dbo.DimDate 
 GO
