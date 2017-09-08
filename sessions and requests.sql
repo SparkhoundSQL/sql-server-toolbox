@@ -216,13 +216,6 @@
 	order by len(blocking_these) - len(replace(blocking_these,',','')) desc, blocking_these desc, blocked_by desc, session_id asc
 */
 	
-	
 	print 'done'
 	go
 	drop table #ExecRequests  
-	
-
-
-	/* 
-	kill 60
-	*/

@@ -12,6 +12,10 @@
 --If too many VLF's truncate the log and recreate in 8gb increments.
 ----http://www.sqlskills.com/blogs/kimberly/transaction-log-vlfs-too-many-or-too-few/
 ----http://www.sqlskills.com/blogs/kimberly/8-steps-to-better-transaction-log-throughput/
+----https://www.red-gate.com/simple-talk/sql/database-administration/sql-server-transaction-log-fragmentation-a-primer/
+
+---"If you need a 2GB log then just create that as one step. 
+---If you need a 20GB log, create that as 8GB, then extend it to 16GB and then to 20GB"
 
 --If no TSQL scripts generated in the Messages tab, then no log files of a significant size were found with >50 VLF's.
 
@@ -43,7 +47,6 @@ Create Table #VLFCount(
     Database_Name   sysname not null 
   , Recovery_model_desc nvarchar(60) not null
   , VLFCount       bigint not null
-  , CreateLSNCount bigint not null
   , log_size_KB			bigint not null
 );
 
@@ -52,24 +55,25 @@ Insert Into #LogInfo
 Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
 
 Insert Into #VLFCount 
-Select d.name, d.Recovery_model_desc, Count_big(distinct l.FSeqNo), Count_Big(distinct l.CreateLSN), log_size_KB = sum(convert(bigint, l.FileSize))
+Select d.name, d.Recovery_model_desc, VLFCount = Count_big(distinct l.CreateLSN), log_size_KB = sum(convert(bigint, l.FileSize))
 From #LogInfo l
 inner join sys.databases d on db_name() = d.name
 --inner join sys.master_files mf on db_id() = mf.database_id WHERE type_desc = ''log''
 group by d.name, Recovery_model_desc
 
-if ((select Count_big(*) from #LogInfo) > 50)
+declare @VLFCount bigint 
+select @VLFCount = Count_big(distinct l.CreateLSN) from #LogInfo l
+if (@VLFCount  > 50)
 BEGIN
-
-
 	DECLARE @LogFileSize_MB_To_Allocate bigint, @loopcounter int, @LogFileSize_MB bigint , @TSQL nvarchar(4000) 
-	select @LogFileSize_MB  = sum(convert(bigint, mf.size))*8 FROM sys.master_files mf where type_desc = ''log'' and db_id() = mf.database_id
+	select @LogFileSize_MB  = sum(convert(bigint, mf.size))*8/1024 FROM sys.master_files mf where type_desc = ''log'' and db_id() = mf.database_id
 
-	IF (@LogFileSize_MB < (8000*1024)) BEGIN
-		select DBName= db_name(), VLFCount = sum(VLFCount), CreateLSNCount = sum(CreateLSNCount), Size_GB = sum(log_size_KB)/1024./1024.
+	IF (@LogFileSize_MB < (8000)) BEGIN
+		select DBName= db_name(), VLFCount = @VLFCount, Size_GB = sum(log_size_KB)/1024./1024.
+		, LogFileSize_MB = @LogFileSize_MB
 		from  #VLFCount where database_name = db_name();
 
-		select  @TSQL =  ''
+		SELECT @TSQL =  ''
 		USE [''+d.name+'']
 		DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY)
 		GO
@@ -95,12 +99,14 @@ Truncate Table #LogInfo;'
 Exec sp_MSforeachdb N'Use [?]; 
 Insert Into #LogInfo  
 Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
-if ((select Count_big(*) from #LogInfo) > 50)
+declare @VLFCount bigint 
+select @VLFCount = Count_big(distinct CreateLSN) from #LogInfo
+if (@VLFCount  > 50)
 BEGIN
 DECLARE @LogFileSize_MB_To_Allocate bigint, @loopcounter int, @LogfileSize_MB bigint , @logFileSize_MB_Current bigint, @TSQL nvarchar(4000) 
 select @LogfileSize_MB  = sum(convert(bigint, mf.size))*8/1024. FROM sys.master_files mf where type_desc = ''log'' and db_id() = mf.database_id
 IF (@LogfileSize_MB >= (8000)) BEGIN
-select DBName= db_name(), VLFCount = sum(VLFCount), CreateLSNCount = sum(CreateLSNCount),  Size_GB = sum(log_size_KB)/1024./1024.
+select DBName= db_name(), VLFCount = sum(VLFCount),  Size_GB = sum(log_size_KB)/1024./1024.
 from  #VLFCount where database_name = db_name();
 SET @LogFileSize_MB_To_Allocate = (@LogfileSize_MB - 8000)
 SET @loopcounter = 1
@@ -108,7 +114,7 @@ select top 1 @TSQL =  ''USE [''+d.name+'']
 DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY)
 GO
 USE [master]
-ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME = N''''''+mf.name+'''''', SIZE = 8000MB )  --INITIAL FILE SIZE CAPPED at 8000MB (See Paul Randal blog). EXTEND IN 8GB INCREMENTS 
+ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME = N''''''+mf.name+'''''', SIZE = 8000MB )  --INITIAL FILE at 8000MB (See Paul Randal blog). EXTEND IN 8GB  
 GO
 ''
 FROM sys.databases d inner join sys.master_files mf on d.database_id = mf.database_id where type_desc = ''log''  and db_name() = d.name
@@ -124,7 +130,7 @@ SET @LoopCounter = @LoopCounter + 1
 SET @LogFileSize_MB_To_Allocate = @LogfileSize_MB - @LogFileSize_MB_current
 END
 set @TSQL = @TSQL + ''
---Returns file to original size.''
+''
 END
 IF @TSQL is not null
 BEGIN
