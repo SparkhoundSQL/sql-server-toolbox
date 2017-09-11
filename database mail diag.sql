@@ -3,7 +3,6 @@ SELECT is_broker_enabled FROM sys.databases WHERE name = 'msdb' ;
 EXECUTE msdb.dbo.sysmail_help_status_sp ;
 --EXECUTE msdb.dbo.sysmail_start_sp --start the database mail queues;
 
-
 GO
 
 SELECT m.recipients, m.subject, m.body, 
@@ -15,3 +14,6 @@ WHERE m.sent_status<>'sent'
 ORDER BY m.send_request_date DESC
 GO
 
+
+--Send mail test
+--exec msdb.dbo.sp_send_dbmail @profile_name ='hotmail', @recipients ='williamdassaf@hotmail.com', @subject ='test', @body = 'test'
