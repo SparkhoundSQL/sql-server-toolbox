@@ -1,27 +1,33 @@
 use msdb
 go
 
---jobs still running 
-create table #enum_job ( 
-Job_ID uniqueidentifier, 
-Last_Run_Date int, 
-Last_Run_Time int, 
-Next_Run_Date int, 
-Next_Run_Time int, 
-Next_Run_Schedule_ID int, 
-Requested_To_Run int, 
-Request_Source int, 
-Request_Source_ID varchar(100), 
-Running int, 
-Current_Step int, 
-Current_Retry_Attempt int, 
-State int 
+declare @xp_sqlagent_enum_jobs table ( 
+Job_ID uniqueidentifier not null PRIMARY KEY, 
+Last_Run_Date int not null, 
+Last_Run_Time int not null, 
+Next_Run_Date int not null, 
+Next_Run_Time int not null,  
+Next_Run_Schedule_ID int not null, 
+Requested_To_Run int not null, 
+Request_Source int not null, 
+Request_Source_ID varchar(100)  null, 
+Running int not null, 
+Current_Step int not null, 
+Current_Retry_Attempt int not null, 
+[State] int not null 
 )
 
-insert into #enum_job 
-exec master.dbo.xp_sqlagent_enum_jobs 1,''  
+INSERT INTO @xp_sqlagent_enum_jobs 
+EXEC master.dbo.xp_sqlagent_enum_jobs 1,''  
+
+--Essentially display the SQL Agent Job Activity Monitor
+SELECT * 
+ FROM msdb.dbo.sysjobs j
+ INNER JOIN @xp_sqlagent_enum_jobs ej ON j.job_id = ej.Job_ID
 
 declare @now datetime = GETDATE()
+
+--Danger, the below is unrefined. Testing only. -w
 
 IF NOT EXISTS (select 1 from admindb.sys.objects o  where name = 'overduejobs')
 CREATE TABLE admindb.[dbo].[overduejobs](
