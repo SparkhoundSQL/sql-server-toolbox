@@ -1,165 +1,249 @@
 
+--DBCC LogInfo
+--If no TSQL scripts generated in the Messages tab, then no log files of a significant size were found with >50 VLF's or small avg VLF sizes.
 
---displays each transaction log size and space used. 
---Dbcc sqlperf (logspace)  --replaced, look for "space in log files.sql"
-
---Shows transactions in the log
---Dbcc log ([tempdb], 0) 
-
---shows the number of VLF's. CreateLSN = 0 for the original created files.
+--shows the number of VLF's. CreateLSN=0 for the original created files.
 --filesize /1024, *8 to get MB 
---Ideally <50 VLF's per tlog
---If too many VLF's truncate the log and recreate in 8gb increments.
-----http://www.sqlskills.com/blogs/kimberly/transaction-log-vlfs-too-many-or-too-few/
-----http://www.sqlskills.com/blogs/kimberly/8-steps-to-better-transaction-log-throughput/
-----https://www.red-gate.com/simple-talk/sql/database-administration/sql-server-transaction-log-fragmentation-a-primer/
+--Ideally <50 VLF's per tlog. 
+--Ideally VLF sizes between 256MB and 1024MB
+--IF log >8 GB, Recreate log in 8gb increments.
 
----"If you need a 2GB log then just create that as one step. 
----If you need a 20GB log, create that as 8GB, then extend it to 16GB and then to 20GB"
-
---If no TSQL scripts generated in the Messages tab, then no log files of a significant size were found with >50 VLF's.
-
---Shrink/regrow step only works for databases with one log file. Why do you have more than one log file anyway?
+--Shrink/regrow step only works for databases with one log file. Why do you have more than one log file anyway? Stop. Think. Ask yourself.
 
 BEGIN TRY
-IF EXISTS (select * from tempdb.sys.objects where name like '#LogInfo%')
-DROP TABLE #LogInfo
-IF EXISTS (select * from tempdb.sys.objects where name like '#VLFCount%')
-DROP TABLE #VLFCount
+IF EXISTS (select * from tempdb.sys.objects where name like '#Log%')
+DROP TABLE #Log
 END TRY
 BEGIN CATCH
 END CATCH
 
 SET NOCOUNT ON
 
-Create Table #LogInfo(
+Create Table #Log(
 	RecoveryUnitId bigint not null--SQL 2012 and above only, comment out for <=SQL 2008
-  , FileID      bigint not null
-  , FileSize    bigint not null
+  , FileID      int not null
+  , FileSize_KB    bigint not null
   , StartOffset bigint not null
   , FSeqNo      bigint not null
-  , [Status]    bigint not null
+  , [Status]    int not null
   , Parity      bigint not null
-  , CreateLSN   decimal(28,0) not null
+  , CreateLSN   decimal(30,0) not null
 );
  
-Create Table #VLFCount(
-    Database_Name   sysname not null 
-  , Recovery_model_desc nvarchar(60) not null
-  , VLFCount       bigint not null
-  , log_size_KB			bigint not null
-);
-
 Exec sp_MSforeachdb N'Use [?]; 
-Insert Into #LogInfo  
+Insert Into #Log  
 Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
+declare @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @T nvarchar(4000) 
+select @Log_MB =sum(convert(bigint, mf.size))*8/1024 FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
+select @VLFCo=Count_big(StartOffset) ,	@Avg_MB=@Log_MB / Count_big(StartOffset)
+from #Log
 
-Insert Into #VLFCount 
-Select d.name, d.Recovery_model_desc, VLFCount = Count_big(distinct l.CreateLSN), log_size_KB = sum(convert(bigint, l.FileSize))
-From #LogInfo l
-inner join sys.databases d on db_name() = d.name
---inner join sys.master_files mf on db_id() = mf.database_id WHERE type_desc = ''log''
-group by d.name, Recovery_model_desc
-
-declare @VLFCount bigint 
-select @VLFCount = Count_big(distinct l.CreateLSN) from #LogInfo l
-if (@VLFCount  > 50)
-BEGIN
-	DECLARE @LogFileSize_MB_To_Allocate bigint, @loopcounter int, @LogFileSize_MB bigint , @TSQL nvarchar(4000) 
-	select @LogFileSize_MB  = sum(convert(bigint, mf.size))*8/1024 FROM sys.master_files mf where type_desc = ''log'' and db_id() = mf.database_id
-
-	IF (@LogFileSize_MB < (8000)) BEGIN
-		select DBName= db_name(), VLFCount = @VLFCount, Size_GB = sum(log_size_KB)/1024./1024.
-		, LogFileSize_MB = @LogFileSize_MB
-		from  #VLFCount where database_name = db_name();
-
-		SELECT @TSQL =  ''
-		USE [''+d.name+'']
-		DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY)
-		GO
-		USE [master]
-		ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME = N''''''+mf.name+'''''', SIZE = ''+convert(varchar(30), mf.size*8/1024)+''MB )
-		GO
-		''
-		FROM sys.databases d inner join sys.master_files mf on d.database_id = mf.database_id where type_desc = ''log'' and db_name() = d.name
-
-		IF @TSQL IS NOT NULL
-		BEGIN
-		set @TSQL = @TSQL + ''
-		--Returns file to original size.''
-		SELECT DB_NAME() + '' log file excessive VLFs. See messages.''
-		print  @TSQL
-		END
-	END
-
-END
-Truncate Table #LogInfo;'
-
---Had to split up this foreachdb because of char limits
-Exec sp_MSforeachdb N'Use [?]; 
-Insert Into #LogInfo  
-Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
-declare @VLFCount bigint 
-select @VLFCount = Count_big(distinct CreateLSN) from #LogInfo
-if (@VLFCount  > 50)
-BEGIN
-DECLARE @LogFileSize_MB_To_Allocate bigint, @loopcounter int, @LogfileSize_MB bigint , @logFileSize_MB_Current bigint, @TSQL nvarchar(4000) 
-select @LogfileSize_MB  = sum(convert(bigint, mf.size))*8/1024. FROM sys.master_files mf where type_desc = ''log'' and db_id() = mf.database_id
-IF (@LogfileSize_MB >= (8000)) BEGIN
-select DBName= db_name(), VLFCount = sum(VLFCount),  Size_GB = sum(log_size_KB)/1024./1024.
-from  #VLFCount where database_name = db_name();
-SET @LogFileSize_MB_To_Allocate = (@LogfileSize_MB - 8000)
-SET @loopcounter = 1
-select top 1 @TSQL =  ''USE [''+d.name+'']
-DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY)
+if (@VLFCo  > 50) AND (@Log_MB <= (8000)) BEGIN
+		select DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
+SELECT @T= ''
+USE [''+d.name+'']
+DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY);
 GO
 USE [master]
-ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME = N''''''+mf.name+'''''', SIZE = 8000MB )  --INITIAL FILE at 8000MB (See Paul Randal blog). EXTEND IN 8GB  
+--Original Size ''+convert(varchar(1000), @Log_MB) +'' MB
+ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME=N''''''+mf.name+'''''', SIZE=''+convert(varchar(30), mf.size*8/1024)+''MB );
 GO
 ''
-FROM sys.databases d inner join sys.master_files mf on d.database_id = mf.database_id where type_desc = ''log''  and db_name() = d.name
-
-WHILE (@LogFileSize_MB_To_Allocate> 0)
+FROM sys.databases d inner join sys.master_files mf on d.database_id=mf.database_id where type_desc=''log'' and db_name()=d.name
+IF @T IS NOT NULL BEGIN
+	set @T=@T+''
+''
+	IF @VLFCo  > 50 
+	SELECT DB_NAME()+'' log file excessive VLFs.''
+	IF @Avg_MB > 1024 
+	SELECT DB_NAME()+'' log file VLFs are too large.''
+	IF @Avg_MB < 256
+	SELECT DB_NAME()+'' log file VLFs are too small.''
+	print  @T
+END	
+END
+Truncate Table #Log;'
+--Had to split this out because of sp_MSforeachdb char limits
+Exec sp_MSforeachdb N'Use [?]; 
+Insert Into #Log  
+Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
+DECLARE @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @Log_curr bigint, @T nvarchar(4000), @LNeed int, @Accu bigint
+SELECT @Log_MB=sum(convert(bigint, mf.size))*8./1024. FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
+SELECT @VLFCo=Count_big(StartOffset) , @Avg_MB=@Log_MB / Count_big(StartOffset) from #Log
+IF ((@VLFCo>50) OR (@Avg_MB>1024) OR (@Avg_MB<256)) AND (@Log_MB>8000)
 BEGIN
-SET @LogFileSize_MB_current = CASE WHEN  (8000 + (@loopCounter * 8192)) > @LogfileSize_MB THEN @LogfileSize_MB ELSE  (8000 + (@loopCounter * 8192))  END
-select top 1 @TSQL = @TSQL + ''ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME = N''''''+mf.name+'''''', SIZE = '' + convert(varchar(1000), @LogFileSize_MB_current) +''MB )
+SELECT DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
+SELECT @LCnt=1, @Accu=0
+SELECT top 1 @T=''
+USE [''+d.name+'']
+DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY);
+GO
+USE master
+GO
+--Original Size ''+convert(varchar(1000), @Log_MB) +'' MB
+''
+FROM sys.databases d join sys.master_files mf on d.database_id=mf.database_id where type_desc=''log'' and db_name()=d.name
+select @LNeed=@Log_MB/8000
+IF (@Log_MB%8000)>=0 
+SELECT @LNeed=@LNeed+1 
+
+WHILE (@LCnt<=@LNeed) BEGIN
+SET @Log_curr=CASE WHEN @LCnt=1 and @Log_MB<=8000 THEN @Log_MB
+WHEN @Log_MB-(8000*@LCnt)>0 THEN 8000 
+WHEN @Log_MB-(8000*@LCnt)<0 THEN @Log_MB-(8000*(@LCnt-1))
+END				
+select @Accu=@Accu+@Log_curr
+if @Log_curr>0
+select top 1 @T=@T+''ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME=N''''''+mf.name+'''''', SIZE =''+convert(varchar(1000), @Accu)+'' MB );
 GO
 ''
-FROM sys.databases d inner join sys.master_files mf on d.database_id = mf.database_id where type_desc = ''log''  and db_name() = d.name
-SET @LoopCounter = @LoopCounter + 1
-SET @LogFileSize_MB_To_Allocate = @LogfileSize_MB - @LogFileSize_MB_current
+FROM sys.databases d join sys.master_files mf on d.database_id=mf.database_id where type_desc=''log'' and db_name()=d.name
+SELECT @LCnt=@LCnt+1 
+END 
 END
-set @TSQL = @TSQL + ''
+IF @T IS NOT NULL BEGIN
+set @T=@T+''
 ''
+IF @VLFCo  > 50 SELECT DB_NAME()+'' excessive VLF count.'';
+IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs are too large on avg.'';
+IF @Avg_MB < 256 SELECT DB_NAME()+'' VLFs are too small on avg.'';
+print @T;
 END
-IF @TSQL is not null
-BEGIN
-SELECT DB_NAME() + '' log file excessive VLFs. See messages.''
-print  @TSQL
-END
-END
-Truncate Table #LogInfo;'
+Truncate Table #Log;'
 
-select * from #VLFCount
-
-Drop Table #LogInfo;
-Drop Table #VLFCount;
-
+Drop Table #Log;
 
 /*
---print ''At '' + convert(varchar(100), @LogFileSize_MB_current) +'', '' + convert(varchar(100), @LogFileSize_MB_To_Allocate) + '' left of '' + convert(varchar(100), @LogfileSize_MB)
+More reference
+----http://www.sqlskills.com/blogs/kimberly/transaction-log-vlfs-too-many-or-too-few/
+----http://www.sqlskills.com/blogs/kimberly/8-steps-to-better-transaction-log-throughput/
+----https://www.red-gate.com/simple-talk/sql/database-administration/sql-server-transaction-log-fragmentation-a-primer/
+---"If you need a 2GB log then just create that as one step. 
+---If you need a 20GB log, create that as 8GB, then extend it to 16GB and then to 20GB"
 
+--displays each transaction log size and space used. 
+--Dbcc sqlperf (logspace)  --replaced, look for "space in log files.sql"
+
+
+*/
+
+/*
+
+--Script to test database, create suboptimal VLF's
 USE [w]
 GO
-DBCC SHRINKFILE (N'w_log' , 0, TRUNCATEONLY)
+DBCC SHRINKFILE (N'w2016_log' , 0, TRUNCATEONLY)
 GO
-USE [master]
-GO
-ALTER DATABASE [w] MODIFY FILE ( NAME = N'w_log', SIZE = 8000MB ) --INITIAL FILE SIZE CAPPED at 8000MB (See Paul Randal blog). EXTEND IN 8GB INCREMENTS 
-GO
---like this:
-ALTER DATABASE [w] MODIFY FILE ( NAME = N'w_log', SIZE = 8001MB ) --... and so on up to current size = 8001MB
 
+USE [master]
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1001MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1002MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1003MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1004MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1005MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1006MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1007MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1008MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1009MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1010MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1011MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1012MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1013MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1014MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1015MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1016MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1017MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1018MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1019MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1020MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1021MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1022MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1023MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1024MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1025MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1026MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1027MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1028MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1029MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1030MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1031MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1032MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1033MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1034MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1035MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1036MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1037MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1038MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1039MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1040MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1041MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1042MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1043MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1044MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1045MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1046MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1047MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1048MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1049MB );
+GO
+--Won't show up in query above until here
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=1050MB );
+GO
+--further testing the 8 GB growth pattern
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=8000MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=8001MB );
+GO
+ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=16001MB );
+GO
 */
 
 
