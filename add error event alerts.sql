@@ -1,3 +1,5 @@
+--TODO: Find/replace the current operator_name value in this document with your intended operator name
+
 USE [msdb]
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 16', 
@@ -7,9 +9,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 16',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 16', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
-GO
-USE [msdb]
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 16', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 17', 
 		@message_id=0, 
@@ -18,7 +18,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 17',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 17', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 17', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 18', 
 		@message_id=0, 
@@ -27,7 +27,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 18',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 18', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 18', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 19', 
 		@message_id=0, 
@@ -36,10 +36,9 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 19',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 19', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 19', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
-USE [msdb]
-GO
+/*
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 20', 
 		@message_id=0, 
 		@severity=20, 
@@ -47,10 +46,9 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 20',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 20', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 20', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
-USE [msdb]
-GO
+*/
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 21', 
 		@message_id=0, 
 		@severity=21, 
@@ -58,9 +56,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 21',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 21', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
-GO
-USE [msdb]
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 21', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 22', 
 		@message_id=0, 
@@ -69,9 +65,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 22',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 22', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
-GO
-USE [msdb]
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 22', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 23', 
 		@message_id=0, 
@@ -80,9 +74,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 23',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 23', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
-GO
-USE [msdb]
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 23', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 24', 
 		@message_id=0, 
@@ -91,9 +83,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 24',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 24', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
-GO
-USE [msdb]
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 24', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 25', 
 		@message_id=0, 
@@ -102,17 +92,17 @@ EXEC msdb.dbo.sp_add_alert @name=N'errorseverity 25',
 		@delay_between_responses=600, 
 		@include_event_description_in=1
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 25', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'errorseverity 25', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 EXEC msdb.dbo.sp_add_alert @name=N'error 3041 - backup failure', 
 		@message_id=3041, 
 		@severity=0, 
 		@enabled=1, 
-		@delay_between_responses=0, 
+		@delay_between_responses=600, 
 		@include_event_description_in=1, 
 		@job_id=N'00000000-0000-0000-0000-000000000000'
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'error 3041 - backup failure', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'error 3041 - backup failure', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 /*
 exec sp_MSforeachdb '
@@ -122,18 +112,61 @@ EXEC msdb.dbo.sp_add_alert @name=N''pct log used - [?] database'',
 		@include_event_description_in=1, 
 		@performance_condition=N''MSSQLSERVER:Databases|Percent Log Used|?|>|95'', 
 		@job_id=N''00000000-0000-0000-0000-000000000000'';
-EXEC msdb.dbo.sp_add_notification @alert_name=N''pct log used - [?] database'', @operator_name=N''sql.alerts@sparkhound.com'', @notification_method = 1'
+EXEC msdb.dbo.sp_add_notification @alert_name=N''pct log used - [?] database'', @operator_name=N''OperatorNameHere'', @notification_method = 1'
 GO
 */
 EXEC msdb.dbo.sp_add_alert @name=N'error 825 - read-retry error (severity 10)', 
 		@message_id=825, 
 		@severity=0, 
 		@enabled=1, 
-		@delay_between_responses=0, 
+		@delay_between_responses=60, 
 		@include_event_description_in=1, 
 		@job_id=N'00000000-0000-0000-0000-000000000000'
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'error 825 - read-retry error (severity 10)', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'error 825 - read-retry error (severity 10)', @operator_name=N'OperatorNameHere', @notification_method = 1
+GO
+
+EXEC msdb.dbo.sp_add_alert @name=N'error 854 - possible memory corruption (severity 10)', 
+		@message_id=854, 
+		@severity=0, 
+		@enabled=1, 
+		@delay_between_responses=60, 
+		@include_event_description_in=1, 
+		@job_id=N'00000000-0000-0000-0000-000000000000'
+GO
+EXEC msdb.dbo.sp_add_notification @alert_name=N'error 854 - possible memory corruption (severity 10)', @operator_name=N'OperatorNameHere', @notification_method = 1
+GO
+
+EXEC msdb.dbo.sp_add_alert @name=N'error 855 - possible memory corruption (severity 10)', 
+		@message_id=855, 
+		@severity=0, 
+		@enabled=1, 
+		@delay_between_responses=60, 
+		@include_event_description_in=1, 
+		@job_id=N'00000000-0000-0000-0000-000000000000'
+GO
+EXEC msdb.dbo.sp_add_notification @alert_name=N'error 855 - possible memory corruption (severity 10)', @operator_name=N'OperatorNameHere', @notification_method = 1
+GO
+
+EXEC msdb.dbo.sp_add_alert @name=N'error 856 - possible memory corruption (severity 10)', 
+		@message_id=856, 
+		@severity=0, 
+		@enabled=1, 
+		@delay_between_responses=60, 
+		@include_event_description_in=1, 
+		@job_id=N'00000000-0000-0000-0000-000000000000'
+GO
+EXEC msdb.dbo.sp_add_notification @alert_name=N'error 856 - possible memory corruption (severity 10)', @operator_name=N'OperatorNameHere', @notification_method = 1
+GO
+EXEC msdb.dbo.sp_add_alert @name=N'error 3624 - assertion failure (severity 20)', 
+		@message_id=3624, 
+		@severity=0, 
+		@enabled=1, 
+		@delay_between_responses=60, 
+		@include_event_description_in=1, 
+		@job_id=N'00000000-0000-0000-0000-000000000000'
+GO
+EXEC msdb.dbo.sp_add_notification @alert_name=N'error 3624 - assertion failure (severity 10)', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 
 
@@ -148,20 +181,6 @@ EXEC msdb.dbo.sp_add_alert @name=N'deadlocks',
 		@performance_condition=N'SQLServer:Locks|Number of Deadlocks/sec|_Total|>|0', 
 		@job_id=N'00000000-0000-0000-0000-000000000000'
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'deadlocks', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
-GO
-
-
---MSSQL$GP2k8r2
-
-USE [msdb]
-GO
-EXEC msdb.dbo.sp_add_alert @name=N'buffer cache hit ratio', 
-		@enabled=1, 
-		@delay_between_responses=300, 
-		@include_event_description_in=1, 
-		@performance_condition=N'SQLServer:Buffer Manager|Buffer cache hit ratio||<|0.8'
-GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'buffer cache hit ratio', @operator_name=N'sql.alerts@sparkhound.com', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'deadlocks', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 */
