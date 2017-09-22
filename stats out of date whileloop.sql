@@ -5,37 +5,37 @@
 declare @tsql nvarchar(max) = 
  N'use [?];
     SELECT distinct
-			s.name AS SchemaName 
-          , o.name AS ObjectName 
-          , STA.name AS StatName 
-		  , Object_Type = ISNULL(I.type_desc + '' Index'', ''Statistics Object'')
-          , Stats_Last_Updated = ISNULL(sp.last_updated, o.create_date)
-		  , Rows_Changed = ISNULL(sp.modification_counter,0) --Rows Changed since last update
-		  , PartitionNumber = CASE WHEN MAX(p.partition_number) OVER (PARTITION by sta.name, i.name)  > 1 THEN p.partition_number ELSE null END
---		  , sta.is_incremental --Only works in SQL 2014+, comment out this line in prior versions.
-		  , ''[?]'' AS [?]
-		  , TSQL = CASE WHEN I.type_desc like ''%columnstore%'' THEN NULL ELSE
+--			s.name AS SchemaName 
+--          , o.name AS ObjectName 
+--          , STA.name AS StatName 
+--		  , Object_Type = ISNULL(i.type_desc + '' Index'', ''Statistics Object'')
+--          , Stats_Last_Updated = ISNULL(sp.last_updated, o.create_date)
+--		  , Rows_Changed = ISNULL(sp.modification_counter,0) --Rows Changed since last update
+--		  , PartitionNumber = CASE WHEN MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN p.partition_number ELSE null END
+----		  , STA.is_incremental --Only works in SQL 2014+, comment out this line in prior versions.
+--		  , ''[?]'' AS [?],
+		   TSQL = CASE WHEN i.type_desc like ''%columnstore%'' THEN NULL ELSE
 		    N''USE [?]; '' + 
 			N''UPDATE STATISTICS '' 
                + QUOTENAME(s.name) + N''.'' + QUOTENAME(o.name) + N'' '' 
-               + QUOTENAME(sta.name) + N'' '' 
+               + QUOTENAME(STA.name) + N'' '' 
 			   + ''WITH RESAMPLE''
 			   + CASE WHEN 
---						sta.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
-						MAX(p.partition_number) OVER (PARTITION by sta.name, i.name)  > 1 THEN '' ON PARTITIONS ('' + cast(p.partition_number as varchar(5)) + '') '' ELSE '''' END
+--						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
+						MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN '' ON PARTITIONS ('' + cast(p.partition_number as varchar(5)) + '') '' ELSE '''' END
                
 			END
    FROM sys.objects  o   
-		 INNER JOIN sys.stats sta ON sta.object_id = o.object_id  
-			CROSS APPLY sys.dm_db_stats_properties (sta.object_id, sta.stats_id) sp -- Only works in SQL2008R2SP2+ or SQL2012SP1+
+		 INNER JOIN sys.stats STA ON STA.object_id = o.object_id  
+			CROSS APPLY sys.dm_db_stats_properties (STA.object_id, STA.stats_id) sp -- Only works in SQL2008R2SP2+ or SQL2012SP1+
          INNER JOIN sys.schemas AS s 
              ON o.schema_id = s.schema_id 
-		 LEFT OUTER JOIN sys.indexes as I
-			on I.index_id = STA.stats_id
-			and (I.type_desc not like ''%columnstore%'')
+		 LEFT OUTER JOIN sys.indexes as i
+			on i.index_id = STA.stats_id
+			and (i.type_desc not like ''%columnstore%'')
 	     LEFT OUTER join sys.dm_db_partition_stats p 
 			on (
---			sta.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
+--			STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
 			p.object_id = o.object_id  and 
 			i.index_id = p.index_id
 			)
@@ -50,15 +50,16 @@ declare @tsql nvarchar(max) =
              ON IUS.object_id = STA.object_id 
     WHERE o.type IN (''U'', ''V'')    -- only user tables and views 
           AND DATEDIFF(d, ISNULL(STATS_DATE(STA.object_id, STA.stats_id), N''1900-01-01'')  , IUS.LastUpdate) > 30 --indexes that haven''t been updated in the last month
-		  AND sp.modification_counter > 1000
-    ORDER BY Rows_Changed desc, Stats_Last_Updated desc
-	OPTION (MAXDOP 1) '
+		  AND sp.modification_counter > 10000
+    OPTION (MAXDOP 1);
+	print ''[?]'' '
 
 declare @dblist table (id int not null identity(1,1) primary key, dbname sysname not null)
+declare @tsqllist table (id int not null identity(1,1) primary key, tsqltext nvarchar(4000) not null) 
 declare @x int = 1, @xmax int = null, @dbname sysname, @runtsql nvarchar(max) = null
 insert into @dblist 
 select name from sys.databases
-where state_desc = 'online' and database_id > 4
+where state_desc = 'online' and (database_id > 4 or name = 'msdb')
 select @xmax = max(id) from @dblist l
 
 while (@x <= @xmax)
@@ -67,11 +68,30 @@ BEGIN
 
 	select @runtsql = replace(@tsql, N'?', @dbname)
 
-	--generates scripts, does not actually perform the UPDATE STATISTICS. Use the column [TSQL].
+	--generates scripts, does not actually perform the UPDATE STATISTICS. See below.
+	insert into @tsqllist (tsqltext) 
 	exec sp_executesql @runtsql
-
+	
 	set @x = @x + 1
 END
+
+--select * from @tsqllist
+
+declare @s int = 1, @scount int = null
+select @scount = max(id), @runtsql = null from @tsqllist l
+while (@s <= @scount)
+BEGIN
+	
+	--actually executes the scripts.
+	select @runtsql = tsqltext from @tsqllist where id = @s
+	exec sp_executesql @runtsql
+	
+	set @s = @s + 1
+	
+END
+
+
+
 
 /*
 
