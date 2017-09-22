@@ -124,6 +124,15 @@
 		, Governor_Pool_ID		=	wg.Pool_id
 		, EndpointName
 		, Protocol
+		, tempdb.session_internal_alloc
+		, tempdb.sesion_internal_dealloc
+		, tempdb.session_user_alloc
+		, tempdb.sesion_user_dealloc
+		, tempdb.task_internal_alloc 
+		, tempdb.task_internal_dealloc
+		, tempdb.task_user_alloc 
+		, tempdb.task_user_dealloc
+		
 		--next two lines are SQL 2012 only!
 		--, stat.total_rows, stat.last_rows
 		from #ExecRequests r
@@ -137,6 +146,21 @@
 		on wg.group_id = r.Governor_Group_Id
 		LEFT OUTER JOIN sys.resource_governor_resource_pools wp
 		on wp.pool_id = wg.Pool_id
+		LEFT OUTER JOIN (SELECT SU.session_id,
+							sum (SU.internal_objects_alloc_page_count)		as session_internal_alloc,
+							sum (SU.internal_objects_dealloc_page_count)	as sesion_internal_dealloc, 
+							sum (SU.user_objects_alloc_page_count)			as session_user_alloc,
+							sum (SU.user_objects_dealloc_page_count)		as sesion_user_dealloc, 
+							sum (TS.internal_objects_alloc_page_count)		as task_internal_alloc ,
+							sum (TS.internal_objects_dealloc_page_count)	as task_internal_dealloc,
+							sum (TS.user_objects_alloc_page_count)			as task_user_alloc ,
+							sum (TS.user_objects_dealloc_page_count)		as task_user_dealloc
+							FROM sys.dm_db_session_space_usage SU
+							inner join sys.dm_db_task_space_usage TS
+							on SU.session_id = TS.session_id
+							where SU.session_id > 50    
+							GROUP BY SU.session_id) as tempdb
+		on tempdb.session_id = r.session_id	
 		
 	) a
 	order by len(blocking_these) - len(replace(blocking_these,',','')) desc, blocking_these desc, blocked_by desc, session_id
