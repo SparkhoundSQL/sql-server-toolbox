@@ -1,7 +1,6 @@
 /* Automated index maint script
 Added by William Assaf, Sparkhound 20140304
-Modified by William Assaf, Sparkhound 20140313
-Modified by Robert Bishop, Sparkhound 20170107 -- changed Version selection to be compatible
+Last Modified by William Assaf, Sparkhound 20170922, integrated smart stats updates
 --Primary objective is to never perform an offline index rebuild unless it is the only option.
 */
 --#TODO For each database:
@@ -11,19 +10,19 @@ Modified by Robert Bishop, Sparkhound 20170107 -- changed Version selection to b
 
 --USE WideWorldImporters --#TODO Change database name
 GO
-DECLARE @testmode		bit
-DECLARE @startwindow	tinyint
-DECLARE @endwindow		tinyint
+DECLARE @TestMode		bit
+DECLARE @StartWindow	tinyint
+DECLARE @EndWindow		tinyint
 
-SELECT @testmode	 =	0	-- flip to 1 to run out of cycle, without actually executing any code.
-SELECT @startwindow	 =	0	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
-SELECT @endwindow	 =	23	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
+SELECT @TestMode	 =	1	-- flip to 1 to run out of cycle, without actually executing any code.
+SELECT @StartWindow	 =	0	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
+SELECT @EndWindow	 =	23	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 
 SET XACT_ABORT ON;
 
 BEGIN TRY 
 
-		--IF @testmode = 0 
+		--IF @TestMode = 0 
 		--ALTER DATABASE wideWorldImporters SET RECOVERY BULK_LOGGED; --#TODO Change database name
 
 		SET NOCOUNT ON;
@@ -31,13 +30,13 @@ BEGIN TRY
 		DECLARE @objectid int
 		, @indexid int
 		, @partitioncount bigint
-		, @schemaname sysname
-		, @objectname sysname
+		, @SchemaName sysname
+		, @ObjectName sysname
 		, @indexname sysname
 		, @partitionnum bigint
 		, @partitions bigint
 		, @frag float
-		, @command varchar(8000)
+		, @Command varchar(8000)
 		, @Can_Reorg bit
 		, @Can_RebuildOnline nvarchar(60)
 		, @Can_Compress bit
@@ -159,136 +158,140 @@ BEGIN TRY
 			BEGIN
 				BEGIN TRY 
 				
-						DECLARE @currenthour	int =	datepart(hour, Getdate())
+						DECLARE @currenthour	int =	datepart(hour, sysdatetimeoffset())
 
-						IF(@startwindow > @endwindow -- wraps midnight
-							AND (	@currenthour >= @startwindow 
-								OR	(@currenthour <= @startwindow 
-								AND @currenthour < @endwindow)
+						IF(@StartWindow > @EndWindow -- wraps midnight
+							AND (	@currenthour >= @StartWindow 
+								OR	(@currenthour <= @StartWindow 
+								AND @currenthour < @EndWindow)
 								)
 
 							)
 							OR 
-							(@startwindow <= @endwindow -- AM only or PM only
-							AND @currenthour >= @startwindow 
-							and @currenthour < @endwindow
+							(@StartWindow <= @EndWindow -- AM only or PM only
+							AND @currenthour >= @StartWindow 
+							and @currenthour < @EndWindow
 							)
 							OR
-							@testmode = 1
-						BEGIN
+							@TestMode = 1
+						BEGIN --Begin Time frame
 					
-							SELECT @objectname = o.name
-								,	@schemaname  = s.name
-							FROM sys.objects AS o
-							INNER JOIN sys.schemas as s ON s.schema_id = o.schema_id
-							WHERE o.object_id = @objectid;
+								SELECT @ObjectName = o.name
+									,	@SchemaName  = s.name
+								FROM sys.objects AS o
+								INNER JOIN sys.schemas as s ON s.schema_id = o.schema_id
+								WHERE o.object_id = @objectid;
 			        			
-							--SELECT @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @indexname, @objectname, @schemaname
+								--SELECT @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @indexname, @ObjectName, @SchemaName
 					
-							SELECT @partitioncount = count (*) 
-							FROM sys.partitions
-							WHERE object_id = @objectid AND index_id = @indexid;
+								SELECT @partitioncount = count (*) 
+								FROM sys.partitions
+								WHERE object_id = @objectid AND index_id = @indexid;
 			       
-							SELECT @command = '';
+								SELECT @Command = '';
 
-							-- 30 is an arbitrary decision point at which to switch between reorganizing and rebuilding
-							IF @frag < 30.0 and @Can_Reorg = 1
-								BEGIN
-						
-									--print '0';
-							
-									SELECT @command = 'ALTER INDEX [' + @indexname + '] ON [' + @schemaname + '].[' + @objectname + '] REORGANIZE ';
-							
-									IF @partitioncount > 1
-										SELECT @command = @command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
-								
-									SELECT @command = @command + '; UPDATE STATISTICS [' + @schemaname + '].[' + @objectname + '] ([' + @indexname + ']); '
-							
-								END
-						
-							IF @frag >= 60.0
-								BEGIN
-							
-									--Doing an INDEX REBUILD with ONLINE = ON reduces the impact of locking to the production server, 
-									--	though it will still create resource contention by keeping the drives and tempdb busy.
-									--  Unlike REORGANIZE steps, a REBUILD also updates the STATISTICS of an index.
-									IF @Can_RebuildOnline = 1
+								-- 30 is an arbitrary decision point at which to switch between reorganizing and rebuilding
+								IF @frag < 30.0 and @Can_Reorg = 1
 									BEGIN
-										--print '1'
+						
+										--print '0';
 							
-										SELECT @command = 'ALTER INDEX [' + @indexname +'] ON [' + @schemaname + '].[' + @objectname + '] REBUILD ';
-								
+										SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
+							
 										IF @partitioncount > 1
-											SELECT @command = @command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
+											SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
+								
+										SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
+							
+									END
+						
+								IF @frag >= 60.0
+									BEGIN
+							
+										--Doing an INDEX REBUILD with ONLINE = ON reduces the impact of locking to the production server, 
+										--	though it will still create resource contention by keeping the drives and tempdb busy.
+										--  Unlike REORGANIZE steps, a REBUILD also updates the STATISTICS of an index.
+										IF @Can_RebuildOnline = 1
+										BEGIN
+											--print '1'
+							
+											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REBUILD ';
+								
+											IF @partitioncount > 1
+												SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
 									
-										SELECT @command = @command + ' WITH (ONLINE = ON'
+											SELECT @Command = @Command + ' WITH (ONLINE = ON'
 								
-										IF @Can_Compress = 1
-										SELECT @command = @command + ', DATA_COMPRESSION = PAGE'
+											IF @Can_Compress = 1
+											SELECT @Command = @Command + ', DATA_COMPRESSION = PAGE'
 		
-										select @command = @command + ');'
-									END
+											select @Command = @Command + ');'
+										END
 							
-									--REORGANIZE processes are always ONLINE and are less intense than REBUILDs.  
-									ELSE IF @Can_Reorg = 1
-									BEGIN
+										--REORGANIZE processes are always ONLINE and are less intense than REBUILDs.  
+										ELSE IF @Can_Reorg = 1
+										BEGIN
 							
-										--print '2'
+											--print '2'
 							
-										SELECT @command = 'ALTER INDEX [' + @indexname +'] ON [' + @schemaname + '].[' + @objectname + '] REORGANIZE ';
+											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
 								
-										IF @partitioncount > 1
-											SELECT @command = @command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
+											IF @partitioncount > 1
+												SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
 								
-										SELECT @command = @command + '; UPDATE STATISTICS [' + @schemaname + '].[' + @objectname + '] ([' + @indexname + ']); '
+											SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
 								
-									END
+										END
 							
-									--OPTIONAL: Only do a full, offline index rebuild in the middle of the night.
-									--ELSE IF datepart(hour, Getdate()) < 3 --inclusive both hours.
-									ELSE 
-									BEGIN	
+										--OPTIONAL: Only do a full, offline index rebuild in the middle of the night.
+										--ELSE IF datepart(hour, sysdatetimeoffset()) < 3 --inclusive both hours.
+										ELSE 
+										BEGIN	
 							
-										--print '3'		
+											--print '3'		
 								
-										SELECT @command = 'ALTER INDEX [' + @indexname + '] ON [' + @schemaname + '.' + @objectname + '] REBUILD';
+											SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '.' + @ObjectName + '] REBUILD';
 								
-										IF @partitioncount > 1
-											SELECT @command = @command + ' PARTITION = ' + CONVERT (CHAR, @partitionnum);
+											IF @partitioncount > 1
+												SELECT @Command = @Command + ' PARTITION = ' + CONVERT (CHAR, @partitionnum);
 															
-										IF @Can_Compress = 1						
-											SELECT @command = @command + ' WITH (DATA_COMPRESSION = PAGE); '
+											IF @Can_Compress = 1						
+												SELECT @Command = @Command + ' WITH (DATA_COMPRESSION = PAGE); '
 								
 										
+										END
 									END
-								END
-							IF @command <> ''
-							BEGIN
-								INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
-								SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @objectname + '].[' + @schemaname + ']', getdate(), @StartWindow, @EndWindow, @TestMode
+								IF @Command <> ''
+								BEGIN
+									INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
+									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
 						
-								BEGIN TRY 
-									IF @testmode = 0 EXEC (@command);
+									BEGIN TRY 
+										IF @TestMode = 0 EXEC (@Command);
 
-									PRINT N'Executed:  ' + @command + ' Frag level: ' + str(@frag)
-									UPDATE DBAHound.dbo.IndexMaintLog 
-									SET EndTimeStamp = Getdate()
-									,	Duration_s = datediff(s, BeginTimeStamp, getdate())
-									where id = SCOPE_IDENTITY() and EndTimeStamp is null
+										PRINT N'Executed:  ' + @Command + ' Frag level: ' + str(@frag)
+										UPDATE DBALogging.dbo.IndexMaintLog 
+										SET EndTimeStamp = sysdatetimeoffset()
+										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
+										where id = SCOPE_IDENTITY() and EndTimeStamp is null
 
-								END TRY 
-								BEGIN CATCH
-									Print N'Error: ' + ERROR_MESSAGE()
-									UPDATE DBAHound.dbo.IndexMaintLog 
-									SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
-									where id = SCOPE_IDENTITY() and EndTimeStamp is null
-								END CATCH
+									END TRY 
+									BEGIN CATCH
+										Print N'Error: ' + ERROR_MESSAGE()
+										UPDATE DBALogging.dbo.IndexMaintLog 
+										SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
+										where id = SCOPE_IDENTITY() and EndTimeStamp is null
+									END CATCH
 	
-							END
-						END
+								END
+
+
+
+						END --End Time frame
+						
 				END TRY
 				BEGIN CATCH
-					PRINT N'Failed to execute the command:  ' + @command + N' Error Message: ' + ERROR_MESSAGE()
+					PRINT N'Failed to execute the command:  ' + @Command + N' Error Message: ' + ERROR_MESSAGE()
 				END CATCH
 
 			FETCH NEXT FROM curIndexPartitions 
@@ -306,14 +309,142 @@ BEGIN TRY
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
 		DROP TABLE #C__work_to_do;
 
-		--IF @testmode = 0 
+		--Begin smart update stats
+
+		select @currenthour	=	datepart(hour, sysdatetimeoffset())
+
+		IF(@StartWindow > @EndWindow -- wraps midnight
+			AND (	@currenthour >= @StartWindow 
+				OR	(@currenthour <= @StartWindow 
+				AND @currenthour < @EndWindow)
+				)
+
+			)
+			OR 
+			(@StartWindow <= @EndWindow -- AM only or PM only
+			AND @currenthour >= @StartWindow 
+			and @currenthour < @EndWindow
+			)
+			OR
+			@TestMode = 1
+		BEGIN
+			declare @tsqllist table (id int not null identity(1,1) primary key, SchemaName sysname, ObjectName sysname, tsqltext nvarchar(4000) not null) 
+			
+			insert into @tsqllist ( SchemaName, ObjectName, tsqltext) 
+			 SELECT distinct
+						s.Name AS SchemaName 
+					  , o.Name AS ObjectName 
+					 -- , STA.name AS StatName 
+					 -- , Object_Type = ISNULL(i.type_desc + ' Index', 'Statistics Object')
+					 -- , Stats_Last_Updated = ISNULL(sp.last_updated, o.create_date)
+					 -- , Rows_Changed = ISNULL(sp.modification_counter,0) --Rows Changed since last update
+					 -- , PartitionNumber = CASE WHEN MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN p.partition_number ELSE null END
+					 -- , STA.is_incremental, --Only works in SQL 2014+, comment out this line in prior versions.
+				, tsqltext = CASE WHEN i.type_desc like '%columnstore%' THEN NULL ELSE
+						N'UPDATE STATISTICS '
+							+ QUOTENAME(s.name) + N'.' + QUOTENAME(o.name) + N' '
+							+ QUOTENAME(STA.name) + N' '
+							+ 'WITH RESAMPLE'
+							+ CASE WHEN 
+			--						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
+									MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN ' ON PARTITIONS (' + cast(p.partition_number as varchar(5)) + ') ' ELSE '' END
+								END
+			   FROM sys.objects  o   
+					 INNER JOIN sys.stats STA ON STA.object_id = o.object_id  
+						CROSS APPLY sys.dm_db_stats_properties (STA.object_id, STA.stats_id) sp -- Only works in SQL2008R2SP2+ or SQL2012SP1+
+					 INNER JOIN sys.schemas AS s 
+						 ON o.schema_id = s.schema_id 
+					 LEFT OUTER JOIN sys.indexes as i
+						on i.index_id = STA.stats_id
+						and (i.type_desc not like '%columnstore%')
+					 LEFT OUTER join sys.dm_db_partition_stats p 
+						on (
+						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
+						p.object_id = o.object_id  and 
+						i.index_id = p.index_id
+						)
+					 LEFT JOIN 
+					 (SELECT IUS.object_id 
+							,MIN(ISNULL(IUS.last_user_update, IUS.last_system_update)) AS LastUpdate 
+					  FROM sys.dm_db_index_usage_stats AS IUS 
+					  WHERE database_id = DB_ID() 
+							AND NOT ISNULL(IUS.last_user_update, IUS.last_system_update) IS NULL 
+					  GROUP BY IUS.object_id 
+
+					 ) AS IUS 
+						 ON IUS.object_id = STA.object_id 
+				WHERE o.type IN ('U', 'V')    -- only user tables and views 
+					  AND DATEDIFF(d, ISNULL(STATS_DATE(STA.object_id, STA.stats_id), N'1900-01-01')  , IUS.LastUpdate) > 30 --indexes that haven''t been updated in the last month
+					  AND sp.modification_counter > 10000
+				OPTION (MAXDOP 1);
+
+			--select * from @tsqllist
+
+			declare @s int = 1, @scount int = null, @runtsql nvarchar(4000) = null
+			select @scount = max(id) from @tsqllist l
+			while (@s <= @scount)
+			BEGIN
+					--Check that we are still in  time frame
+					select @currenthour	=	datepart(hour, sysdatetimeoffset())
+					IF(@StartWindow > @EndWindow -- wraps midnight
+						AND (	@currenthour >= @StartWindow 
+							OR	(@currenthour <= @StartWindow 
+							AND @currenthour < @EndWindow)
+							)
+
+						)
+						OR 
+						(@StartWindow <= @EndWindow -- AM only or PM only
+						AND @currenthour >= @StartWindow 
+						and @currenthour < @EndWindow
+						)
+						OR
+						@TestMode = 1
+					BEGIN
+						print 'beginning stats'
+						--actually executes the scripts.
+						select	@runtsql = tsqltext
+							,	@ObjectName = ObjectName
+							,	@SchemaName	 = SchemaName
+						 from @tsqllist where id = @s
+						
+						INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
+						SELECT DB_NAME(), @runtsql, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
+						
+						BEGIN TRY 
+							IF @TestMode = 0 EXEC (@runtsql);
+
+							PRINT N'Executed:  ' + @runtsql 
+							UPDATE DBALogging.dbo.IndexMaintLog 
+							SET EndTimeStamp = sysdatetimeoffset()
+							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
+							where id = SCOPE_IDENTITY() and EndTimeStamp is null
+
+						END TRY 
+						BEGIN CATCH
+							Print N'Error: ' + ERROR_MESSAGE()
+							UPDATE DBALogging.dbo.IndexMaintLog 
+							SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
+							where id = SCOPE_IDENTITY() and EndTimeStamp is null
+						END CATCH
+
+
+						set @s = @s + 1
+
+					END
+			END
+		
+			print 'end update stats'
+		END
+
+		--IF @TestMode = 0 
 		--ALTER DATABASE [WideWorldImporters] SET RECOVERY FULL --#TODO Change database name
-	
+
 	END TRY
 	BEGIN CATCH
 		PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
-		INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
-		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  getdate(), @TestMode
+		INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
+		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
 		
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
 		DROP TABLE #C__work_to_do;
@@ -329,22 +460,28 @@ BEGIN TRY
 GO
 
 /*
-DROP TABLE DBAHound.dbo.IndexMaintLog;
-CREATE TABLE DBAHound.dbo.IndexMaintLog
+DROP TABLE DBALogging.dbo.IndexMaintLog;
+CREATE TABLE DBALogging.dbo.IndexMaintLog
 (	id int not null identity(1,1) PRIMARY KEY
 ,	CurrentDatabase sysname not null DEFAULT (DB_NAME())
 ,	Command nvarchar(1000) null
 ,	ObjectName nvarchar(100) null 
-,	BeginTimeStamp	datetime  null 
+,	BeginTimeStamp	datetime2(0)  null 
 ,	TestMode bit  null
 ,	StartWindow tinyint  null
 ,	EndWindow tinyint  null
-,	EndTimeStamp datetime null
+,	EndTimeStamp datetime2(0) null
 ,	Duration_s int null
 ,	ErrorMessage nvarchar(4000) null
 )
 
+alter table DBALogging.dbo.IndexMaintLog
+alter column BeginTimeStamp	datetime2(2)  null 
 
-select * from DBAHound.dbo.indexmaintlog
+alter table DBALogging.dbo.IndexMaintLog
+alter column EndTimeStamp	datetime2(2)  null 
+
+
+select * from DBALogging.dbo.indexmaintlog
 
 */
