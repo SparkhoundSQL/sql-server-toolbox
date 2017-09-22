@@ -6,12 +6,13 @@
     $PrimaryReplicaInstanceName = "DEFAULT"
     $SecondaryReplicaName1 = "SQLSERVER-1"
     $SecondaryReplicaInstanceName1 = "DEFAULT"
-    $PrimaryReplica = Get-Item "AvailabilityReplicas\$($PrimaryReplicaName)"
-    $SecondaryReplica1 = Get-Item "AvailabilityReplicas\$($SecondaryReplicaName1)"
-    Set-Location "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\"
+    $AvailabilityGroupName = "WWI2017-AG"
 
-    Get-ChildItem "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
-    
+    Set-Location "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\"
+
+    #In the following line, the %5C character replaces the \ between the SQL Server name and instance name. Passing in \ is invalid, as the \ is in the string, but is confused for a folder path.
+    Get-ChildItem "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\$($PrimaryReplicaName+$('%5C')+$PrimaryReplicaInstanceName)" `
+    | Test-SqlAvailabilityReplica 
 
 #1-- Planned failover.
 
@@ -23,19 +24,19 @@
     $SecondaryReplicaInstanceName1 = "DEFAULT"
     $PrimaryReplica = Get-Item "AvailabilityReplicas\$($PrimaryReplicaName)"
     $SecondaryReplica1 = Get-Item "AvailabilityReplicas\$($SecondaryReplicaName1)"
-    Set-Location "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\"
+    Set-Location "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\"
 
-    Get-ChildItem "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
+    Get-ChildItem "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
 
     #1-1-- Make the intended failover target temporarily Synchronous in an attempt to prevent data loss. 
     Set-SqlAvailabilityReplica `
-        -Path "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\$($SecondaryReplicaName1)" `
+        -Path "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\$($SecondaryReplicaName1)" `
         -AvailabilityMode "SynchronousCommit" `
         -FailoverMode "Manual" `
         -ErrorAction Stop
     
     Set-SqlAvailabilityReplica `
-        -Path "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\$($PrimaryReplicaName)" `
+        -Path "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\$($PrimaryReplicaName)" `
         -AvailabilityMode "SynchronousCommit" `
         -FailoverMode "Manual" `
         -ErrorAction Stop
@@ -43,26 +44,27 @@
     write-host "Waiting"
     Start-Sleep -s 10
 
+
     #1-2-- Peform the Planned Failover to SecondaryReplicaName1.
     # Path of the new primary server. DEFAULT for the DEFAULT instance, replace with named instance if need be.
         
     Switch-SqlAvailabilityGroup `
-        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\" `
+        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\" `
          -ErrorAction Stop
         #Only include the next line if it is a forced failover
         #-AllowDataLoss -Force
      
      write-host "Switch Made"
-     Get-ChildItem "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
+     Get-ChildItem "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
 
     #1-3-- Return secondary replica to Asynchronous
     #Note that the values here of Primary and Secondary1 are flipped, because the variables predate the failover.
        Set-SqlAvailabilityReplica `
-        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\$($PrimaryReplicaName)" `
+        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\$($PrimaryReplicaName)" `
         -AvailabilityMode AsynchronousCommit `
         -ErrorAction Stop
        Set-SqlAvailabilityReplica `
-        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\$($SecondaryReplicaName1)" `
+        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\$($SecondaryReplicaName1)" `
         -AvailabilityMode AsynchronousCommit `
         -ErrorAction Stop
 
@@ -94,30 +96,30 @@
     $SecondaryReplicaInstanceName1 = "DEFAULT"
     $PrimaryReplica = Get-Item "AvailabilityReplicas\$($PrimaryReplicaName)"
     $SecondaryReplica1 = Get-Item "AvailabilityReplicas\$($SecondaryReplicaName1)"
-    Set-Location "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\"
+    Set-Location "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\"
 
-    Get-ChildItem "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
+    Get-ChildItem "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
 
     #1-1-- Peform the Planned Failover to SecondaryReplicaName1.
     # Path of the new primary server. DEFAULT for the DEFAULT instance, replace with named instance if need be.
         
     Switch-SqlAvailabilityGroup `
-        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\" `
+        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\" `
          -ErrorAction Stop
         #Only include the next line if it is a forced failover
         -AllowDataLoss -Force
      
      write-host "Switch Made"
-     Get-ChildItem "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
+     Get-ChildItem "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\"  | Test-SqlAvailabilityReplica
 
     #1-2-- Return secondary replica to Asynchronous
     #Note that the values here of Primary and Secondary1 are flipped, because the variables predate the failover.
     #   Set-SqlAvailabilityReplica `
-    #    -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\$($PrimaryReplicaName)" `
+    #    -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\$($PrimaryReplicaName)" `
     #    -AvailabilityMode AsynchronousCommit `
     #    -ErrorAction Stop
        Set-SqlAvailabilityReplica `
-        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\Sparkhound-ag\AvailabilityReplicas\$($SecondaryReplicaName1)" `
+        -Path "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInstanceName1)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\$($SecondaryReplicaName1)" `
         -AvailabilityMode AsynchronousCommit `
         -ErrorAction Stop
 
