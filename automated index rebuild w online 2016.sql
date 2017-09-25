@@ -428,13 +428,12 @@ BEGIN TRY
 							where id = SCOPE_IDENTITY() and EndTimeStamp is null
 						END CATCH
 
-
-						set @s = @s + 1
-
 					END
+
+					set @s = @s + 1
 			END
 		
-			print 'end update stats'
+			--print 'end update stats'
 		END
 
 		--IF @TestMode = 0 
@@ -483,5 +482,10 @@ alter column EndTimeStamp	datetime2(2)  null
 
 
 select * from DBALogging.dbo.indexmaintlog
+
+
+update DBALogging.dbo.IndexMaintLog
+set Duration_s = Duration_s - 18000
+where Duration_s >= 18000
 
 */
