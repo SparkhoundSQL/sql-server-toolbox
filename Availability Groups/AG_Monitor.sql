@@ -115,6 +115,7 @@ select
 ,	Sampled_Transaction_Delay_ms	= (td.TransactionDelay_end - td.TransactionDelay_start)  
 ,	Transaction_Delay_ms_per_s	= convert(decimal(19,2), (td.TransactionDelay_end - td.TransactionDelay_Start) / ((td.TransactionDelay_end_ms - td.TransactionDelay_Start_ms)/1000.))
 ,	Transactions_per_s	= convert(decimal(19,2), ((td.MirroredWriteTranspersec_end - td.MirroredWriteTranspersec_start) / ((td.MirroredWriteTranspersec_End_ms - td.MirroredWriteTranspersec_Start_ms)/1000.)))
+,	dm.secondary_lag_seconds --Only works SQL 2016+
 ,	ar.backup_priority
 ,	ar.modify_date
 ,	ar.endpoint_url 

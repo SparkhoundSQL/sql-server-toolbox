@@ -158,7 +158,7 @@ BEGIN TRY
 			BEGIN
 				BEGIN TRY 
 				
-						DECLARE @currenthour	int =	datepart(hour, sysdatetimeoffset())
+						DECLARE @currenthour	int =	datepart(hour, sysdatetime())
 
 						IF(@StartWindow > @EndWindow -- wraps midnight
 							AND (	@currenthour >= @StartWindow 
@@ -244,7 +244,7 @@ BEGIN TRY
 										END
 							
 										--OPTIONAL: Only do a full, offline index rebuild in the middle of the night.
-										--ELSE IF datepart(hour, sysdatetimeoffset()) < 3 --inclusive both hours.
+										--ELSE IF datepart(hour, sysdatetime()) < 3 --inclusive both hours.
 										ELSE 
 										BEGIN	
 							
@@ -264,15 +264,15 @@ BEGIN TRY
 								IF @Command <> ''
 								BEGIN
 									INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
-									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
+									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetime(), @StartWindow, @EndWindow, @TestMode
 						
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
 										PRINT N'Executed:  ' + @Command + ' Frag level: ' + str(@frag)
 										UPDATE DBALogging.dbo.IndexMaintLog 
-										SET EndTimeStamp = sysdatetimeoffset()
-										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
+										SET EndTimeStamp = sysdatetime()
+										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetime())
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
 
 									END TRY 
@@ -311,7 +311,7 @@ BEGIN TRY
 
 		--Begin smart update stats
 
-		select @currenthour	=	datepart(hour, sysdatetimeoffset())
+		select @currenthour	=	datepart(hour, sysdatetime())
 
 		IF(@StartWindow > @EndWindow -- wraps midnight
 			AND (	@currenthour >= @StartWindow 
@@ -385,7 +385,7 @@ BEGIN TRY
 			while (@s <= @scount)
 			BEGIN
 					--Check that we are still in  time frame
-					select @currenthour	=	datepart(hour, sysdatetimeoffset())
+					select @currenthour	=	datepart(hour, sysdatetime())
 					IF(@StartWindow > @EndWindow -- wraps midnight
 						AND (	@currenthour >= @StartWindow 
 							OR	(@currenthour <= @StartWindow 
@@ -409,15 +409,15 @@ BEGIN TRY
 						 from @tsqllist where id = @s
 						
 						INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
-						SELECT DB_NAME(), @runtsql, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
+						SELECT DB_NAME(), @runtsql, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetime(), @StartWindow, @EndWindow, @TestMode
 						
 						BEGIN TRY 
 							IF @TestMode = 0 EXEC (@runtsql);
 
 							PRINT N'Executed:  ' + @runtsql 
 							UPDATE DBALogging.dbo.IndexMaintLog 
-							SET EndTimeStamp = sysdatetimeoffset()
-							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
+							SET EndTimeStamp = sysdatetime()
+							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetime())
 							where id = SCOPE_IDENTITY() and EndTimeStamp is null
 
 						END TRY 
@@ -444,7 +444,7 @@ BEGIN TRY
 	BEGIN CATCH
 		PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
 		INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
-		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
+		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetime(), @TestMode
 		
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
 		DROP TABLE #C__work_to_do;
