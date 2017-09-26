@@ -54,18 +54,6 @@ EXEC msdb.dbo.sp_add_alert @name=N'Availability Groups related Error - 35279',
   @include_event_description_in=1, 
   @job_id=N'00000000-0000-0000-0000-000000000000'
 
-  GO 
-/* *************************************************************** */ 
---Skipping the default startup of database '(null)' because the database belongs to an availability group (Group ID:  (null)). The database will be started by the availability group. This is an informational message only. No user action is required.
-EXEC msdb.dbo.sp_add_alert @name=N'Availability Groups related Error - 35262',
-  @message_id=35262, 
-  @severity=0, 
-  @enabled=1, 
-  @delay_between_responses=300, 
-  @include_event_description_in=1, 
-  @job_id=N'00000000-0000-0000-0000-000000000000'
-  GO
-
 /* *************************************************************** */ 
 --Failed to allocate and schedule an AlwaysOn Availability Groups task for database '(null)'. Manual intervention may be required to resume synchronization of the database. If the problem persists, you might need to restart the local instance of SQL Server.
 EXEC msdb.dbo.sp_add_alert @name=N'Availability Groups related Error - 35276',
@@ -81,7 +69,6 @@ EXEC msdb.dbo.sp_add_alert @name=N'Availability Groups related Error - 35276',
 DECLARE @OperatorName nvarchar(100)='sql.alerts@sparkhound.com'
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups related Error - 35273', @operator_name=@OperatorName, @notification_method = 1;
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups related Error - 35276', @operator_name=@OperatorName, @notification_method = 1;
-EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups related Error - 35262', @operator_name=@OperatorName, @notification_method = 1;
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups related Error - 35274', @operator_name=@OperatorName, @notification_method = 1
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups related Error - 35254', @operator_name=@OperatorName, @notification_method = 1
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups related Error - 35279', @operator_name=@OperatorName, @notification_method = 1
