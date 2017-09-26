@@ -111,7 +111,7 @@ select
 ,	redo_queue_size_mb		= redo_queue_size/1024.
 ,	Redo_Time_Left_s_RTO	= dm.redo_queue_size/NULLIF(dm.redo_rate,0) --https://msdn.microsoft.com/en-us/library/dn135338(v=sql.110).aspx --only part of RTO
 ,	Log_Send_Queue_RPO		= dm.log_send_queue_size/NULLIF(@LogBytesFushed ,0) --Rate
-,	Sampled_Transactions	= (td.MirroredWriteTranspersec_end - td.MirroredWriteTranspersec_start)  
+,	Sampled_Transactions_count			= (td.MirroredWriteTranspersec_end - td.MirroredWriteTranspersec_start)  
 ,	Sampled_Transaction_Delay_ms	= (td.TransactionDelay_end - td.TransactionDelay_start)  
 ,	Transaction_Delay_ms_per_s	= convert(decimal(19,2), (td.TransactionDelay_end - td.TransactionDelay_Start) / ((td.TransactionDelay_end_ms - td.TransactionDelay_Start_ms)/1000.))
 ,	Transactions_per_s	= convert(decimal(19,2), ((td.MirroredWriteTranspersec_end - td.MirroredWriteTranspersec_start) / ((td.MirroredWriteTranspersec_End_ms - td.MirroredWriteTranspersec_Start_ms)/1000.)))
