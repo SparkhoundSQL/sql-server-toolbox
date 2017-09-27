@@ -1,8 +1,8 @@
 --In Azure SQL, cannot run this in Master, must run in a user database.
 
 	declare @showallspids bit, @showinternalgroup bit 
-	select	@showallspids = 1 -- 1= show all sessions, 0= show only active requests
-		,	@showinternalgroup = 0 -- 1= show internal sessions, 0= ignore internal sessions
+	select	@showallspids = 1-- 1= show all sessions, 0= show only active requests
+		,	@showinternalgroup = 1 -- 1= show internal sessions, 0= ignore internal sessions based on RG group_id
 
 	create table #ExecRequests  (
 		id int IDENTITY(1,1) PRIMARY KEY
@@ -122,7 +122,7 @@
 		, Governor_Group_ID		=	r.Governor_Group_Id
 		, Governor_Pool_Name	=	wp.name 
 		, Governor_Pool_ID		=	wg.Pool_id
-		, EndpointName
+		, EndPointName
 		, Protocol
 		, tempdb.session_internal_alloc
 		, tempdb.sesion_internal_dealloc
