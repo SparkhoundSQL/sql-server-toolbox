@@ -14,7 +14,8 @@ UPDATE dbo.dead WITH (TABLOCK) SET col1 = 2
 --
 UPDATE dbo.lock WITH (TABLOCK) SET col1 = 4
 COMMIT TRAN t1
-select SYSDATETIME()
+GO
+select SYSDATETIME();
 
 
 
