@@ -3,6 +3,16 @@
 -- Connect to each replica in your AlwaysOn cluster and run this script to get the read_only_routing_url for the replica. 
 -- Then set this to the read_only_routing_url for the availability group replica => 
 --    alter availability group MyAvailabilityGroup modify replica on N'ThisReplica' with (secondary_role(read_only_routing_url=N'<url>')) 
+
+
+/*
+	ALTER AVAILABILITY GROUP [WWI2017-CLUSTERLESS] MODIFY REPLICA ON N'SQLServer-0\sql2k17' WITH (SECONDARY_ROLE(READ_ONLY_ROUTING_URL=N'tcp://sqlserver-0.wwi.com:49540')) 
+	ALTER AVAILABILITY GROUP [WWI2017-CLUSTERLESS] MODIFY REPLICA ON N'SQLServer-1\sql2k17' WITH (SECONDARY_ROLE(READ_ONLY_ROUTING_URL=N'tcp://sqlserver-1.wwi.com:49826')) 
+	  ALTER AVAILABILITY GROUP [WWI2017-CLUSTERLESS] MODIFY REPLICA ON N'SQLServer-0\sql2k17' WITH (PRIMARY_ROLE (READ_ONLY_ROUTING_LIST=( N'SQLServer-1\sql2k17', N'SQLServer-0\sql2k17')));  
+	  ALTER AVAILABILITY GROUP [WWI2017-CLUSTERLESS] MODIFY REPLICA ON N'SQLServer-1\sql2k17' WITH (PRIMARY_ROLE (READ_ONLY_ROUTING_LIST=( N'SQLServer-0\sql2k17', N'SQLServer-1\sql2k17')));  
+
+*/
+
 print 'Read-only-routing url script v.2012.1.24.1'
 
 print 'This SQL Server instance version is [' + cast(serverproperty('ProductVersion') as varchar(256)) + ']'
@@ -201,3 +211,4 @@ begin -- if server supports read-only routing
 
 end -- if server supports read-only routing 
 go
+
