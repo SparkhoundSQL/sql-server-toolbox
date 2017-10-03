@@ -1,60 +1,46 @@
- 
+USE WideWorldImporters 
 go
---select db_id()
+--Using ALTER INDEX ALL isn't the most efficient. Instead, consider index-level or index-partition-level REBUILDs.
+--See also \toolbox\automated index rebuild w online 2016.sql
 
---CREATE TABLE sqlIndexREBUILD (
---	id int IDENTITY(1,1) NOT NULL PRIMARY KEY,
---	SQLString varchar(200) NOT NULL,
---	Fraglevel Decimal(19,3) NOT NULL,
---)
---GO
---CREATE PROCEDURE dbo.spDetectIndexFragmentation
---AS
---
---INSERT INTO sqlIndexRebuild (SQLString, FragLevel)
+--Consider also DATA_COMPRESSION, SORT_IN_TEMPDB, ONLINE, MAXDOP options
+
 SELECT DISTINCT
-	SQL_Reorg = 'ALTER INDEX ALL ON ' + x.dbname + '.' + x.schemaname + '.' + x.[table] + ' REORGANIZE' 
-,	SQL_Status = 'UPDATE STATISTICS ' + x.dbname + '.' + x.schemaname + '.' + x.[table]  + CHAR(10)+ CHAR(13)+'GO'
-,	SQL_Rebuild = 'ALTER INDEX ALL ON ' + x.dbname + '.' + x.schemaname + '.' + x.[table] + ' REBUILD '  
---,	FragLevel	=	sum(FragLevel)
-,	avg_fragmentation_in_percent	=	avg(avg_fragmentation_in_percent)
+	SQL_Reorg = 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REORGANIZE;' 
+,	SQL_Status = 'UPDATE STATISTICS ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name]  + ';
+GO'
+,	SQL_Rebuild = 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REBUILD;'  
+,	avg_fragmentation_pct	=	avg(avg_fragmentation_pct)
 ,	page_count	=	sum(page_count)
 --, * 
 FROM 
 (
 select 
-	--[fraglevel] = (power(s.avg_fragmentation_in_percent,2) *page_count)/power(10,7),
-	avg_fragmentation_in_percent = s.avg_fragmentation_in_percent
-,	page_count = page_count
-,	dbname		= db_name(s.database_id)
-,	[table]		= o.name
-,	schemaname	= sc.name
---, index_name = i.name, s.index_type_desc, alloc_unit_type_desc, s.avg_fragmentation_in_percent, page_count, fragment_count, avg_fragment_size_in_pages
---select *
-from sys.dm_db_index_physical_stats (DB_ID(),null,null, null,'limited') s
-inner join --select * from
-sys.indexes i on s.object_id = i.object_id and s.index_id = i.index_id
-inner join  --select * from
-sys.objects o on o.object_id = s.object_id
-inner join --select * from
-sys.schemas sc
-on o.schema_id = sc.schema_id
-
-WHERE 
-		i.is_disabled = 0
-and		i.type_desc = 'CLUSTERED'
-and		s.database_id = db_id()
-and		alloc_unit_Type_desc <> 'LOB_DATA'
---and page_count > 100
+  DB = db_name(s.database_id)
+, [schema_name] = sc.name
+, [table_name] = o.name
+, index_name = i.name
+, s.index_type_desc
+, s.partition_number
+, avg_fragmentation_pct = s.avg_fragmentation_in_percent
+, s.page_count
+from sys.indexes as i 
+CROSS APPLY sys.dm_db_index_physical_stats (DB_ID(),i.object_id,i.index_id, null,'limited') as s
+INNER JOIN sys.objects as o ON o.object_id = s.object_id
+INNER JOIN sys.schemas as sc ON o.schema_id = sc.schema_id
+WHERE i.is_disabled = 0
+--AND s.page_count > 12800 --12800 pages is 100mb
+AND	alloc_unit_Type_desc <> 'LOB_DATA'
 
 ) x
-WHERE avg_fragmentation_in_percent > 70
-group by x.dbname , x.schemaname , x.[table]
-order by page_count desc, avg_fragmentation_in_percent desc
+WHERE avg_fragmentation_pct > 70
+group by x.DB , x.[schema_name] , x.[table_name]
+order by page_count desc, avg_fragmentation_pct desc
 
 GO
 
 /*
 ALTER INDEX ALL ON WideWorldImporters.Sales.Invoices REBUILD
 WITH (MAXDOP = 1, ONLINE = ON);
+ALTER INDEX ALL ON WideWorldImporters.Sales.Invoices REBUILD WITH (MAXDOP = 1, SORT_IN_TEMPDB = ON);
 */
