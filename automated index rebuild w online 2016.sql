@@ -98,9 +98,9 @@ BEGIN TRY
 											ELSE 0
 										END
 				,	indexname		=	i.name --select object_name(object_id), * 
-			FROM sys.dm_db_index_physical_stats (DB_ID(), NULL, NULL , NULL, 'LIMITED') s
-			inner join --select * from
-			sys.indexes i on s.object_id = i.object_id and s.index_id = i.index_id
+			FROM sys.indexes i 
+			cross apply 
+			sys.dm_db_index_physical_stats (DB_ID(), i.object_id, i.index_id , NULL, 'LIMITED') s
 			left outer join 
 			(
 				select 
@@ -113,9 +113,9 @@ BEGIN TRY
 				on c.user_type_id = t.user_type_id
 				WHERE 
 				( t.name in (N'image', N'text', N'ntext', N'xml')
-							or	(t.name in ('varchar', 'nvarchar', 'varbinary') 
-								 and c.max_length = -1 --indicates (MAX)
-								)
+							--or	(t.name in ('varchar', 'nvarchar', 'varbinary') --This is no longer necessary after SQL Server 2012!
+							--	 and c.max_length = -1 --indicates (MAX)
+							--	)
 						)
 			) A 
 			on i.object_id = A.object_id
