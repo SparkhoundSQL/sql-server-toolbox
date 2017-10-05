@@ -166,7 +166,7 @@ EXEC msdb.dbo.sp_add_alert @name=N'error 3624 - assertion failure (severity 20)'
 		@include_event_description_in=1, 
 		@job_id=N'00000000-0000-0000-0000-000000000000'
 GO
-EXEC msdb.dbo.sp_add_notification @alert_name=N'error 3624 - assertion failure (severity 10)', @operator_name=N'OperatorNameHere', @notification_method = 1
+EXEC msdb.dbo.sp_add_notification @alert_name=N'error 3624 - assertion failure (severity 20)', @operator_name=N'OperatorNameHere', @notification_method = 1
 GO
 
 
