@@ -263,14 +263,14 @@ BEGIN TRY
 									END
 								IF @Command <> ''
 								BEGIN
-									INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
+									INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
 									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetime(), @StartWindow, @EndWindow, @TestMode
 						
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
 										PRINT N'Executed:  ' + @Command + ' Frag level: ' + str(@frag)
-										UPDATE DBALogging.dbo.IndexMaintLog 
+										UPDATE DBAHound.dbo.IndexMaintLog 
 										SET EndTimeStamp = sysdatetime()
 										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetime())
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -278,7 +278,7 @@ BEGIN TRY
 									END TRY 
 									BEGIN CATCH
 										Print N'Error: ' + ERROR_MESSAGE()
-										UPDATE DBALogging.dbo.IndexMaintLog 
+										UPDATE DBAHound.dbo.IndexMaintLog 
 										SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
 									END CATCH
@@ -408,14 +408,14 @@ BEGIN TRY
 							,	@SchemaName	 = SchemaName
 						 from @tsqllist where id = @s
 						
-						INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
+						INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
 						SELECT DB_NAME(), @runtsql, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetime(), @StartWindow, @EndWindow, @TestMode
 						
 						BEGIN TRY 
 							IF @TestMode = 0 EXEC (@runtsql);
 
 							PRINT N'Executed:  ' + @runtsql 
-							UPDATE DBALogging.dbo.IndexMaintLog 
+							UPDATE DBAHound.dbo.IndexMaintLog 
 							SET EndTimeStamp = sysdatetime()
 							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetime())
 							where id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -423,7 +423,7 @@ BEGIN TRY
 						END TRY 
 						BEGIN CATCH
 							Print N'Error: ' + ERROR_MESSAGE()
-							UPDATE DBALogging.dbo.IndexMaintLog 
+							UPDATE DBAHound.dbo.IndexMaintLog 
 							SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
 							where id = SCOPE_IDENTITY() and EndTimeStamp is null
 						END CATCH
@@ -442,7 +442,7 @@ BEGIN TRY
 	END TRY
 	BEGIN CATCH
 		PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
-		INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
+		INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
 		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetime(), @TestMode
 		
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
@@ -459,8 +459,8 @@ BEGIN TRY
 GO
 
 /*
-DROP TABLE DBALogging.dbo.IndexMaintLog;
-CREATE TABLE DBALogging.dbo.IndexMaintLog
+DROP TABLE DBAHound.dbo.IndexMaintLog;
+CREATE TABLE DBAHound.dbo.IndexMaintLog
 (	id int not null identity(1,1) PRIMARY KEY
 ,	CurrentDatabase sysname not null DEFAULT (DB_NAME())
 ,	Command nvarchar(1000) null
@@ -474,17 +474,17 @@ CREATE TABLE DBALogging.dbo.IndexMaintLog
 ,	ErrorMessage nvarchar(4000) null
 )
 
-alter table DBALogging.dbo.IndexMaintLog
+alter table DBAHound.dbo.IndexMaintLog
 alter column BeginTimeStamp	datetime2(2)  null 
 
-alter table DBALogging.dbo.IndexMaintLog
+alter table DBAHound.dbo.IndexMaintLog
 alter column EndTimeStamp	datetime2(2)  null 
 
 
-select * from DBALogging.dbo.indexmaintlog
+select * from DBAHound.dbo.indexmaintlog
 
 
-update DBALogging.dbo.IndexMaintLog
+update DBAHound.dbo.IndexMaintLog
 set Duration_s = Duration_s - 18000
 where Duration_s >= 18000
 
