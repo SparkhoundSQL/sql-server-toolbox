@@ -11,18 +11,19 @@ select
 ,	os.[Server Physical Mem (MB)] -- SQL2012+ only
 ,	c.[Min Server Mem (MB)]
 ,	c.[Max Server Mem (MB)]
-,	p.[Target Server Mem (MB)]	
-,	p.[Total Server Mem (MB)]	
-,	p.[PLE (s)] --300s is only a rule for smaller memory servers (<16gb)
-,	'Churn (MB/s)'			=	cast((p.[Total Server Mem (MB)])/1024./NULLIF(p.[PLE (s)],0) as decimal(19,2))
+,	p.Target_Server_Mem_GB	
+,	p.Total_Server_Mem_GB	
+,	p.PLE_s --300s is only a rule for smaller memory servers (<16gb)
+,	'Churn (MB/s)'			=	cast((p.Total_Server_Mem_GB)/1024./NULLIF(p.PLE_s,0) as decimal(19,2))
 ,	si.LPIM -- Works on SQL 2016 SP1 and above only
 from(
 select 
 	InstanceName = @@SERVERNAME 
-,	'Target Server Mem (MB)' =	max(case when counter_name = 'Target Server Memory (KB)' then convert(decimal(19,2), cntr_value/1024.)end)
-,	'Total Server Mem (MB)'	=	max(case when counter_name = 'Total Server Memory (KB)' then convert(decimal(19,2), cntr_value/1024.) end) 
-,	'PLE (s)'	=	max(case when counter_name = 'Page life expectancy'  then cntr_value end) 
-from sys.dm_os_performance_counters) 
+,	Target_Server_Mem_GB =	max(case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end)
+,	Total_Server_Mem_GB	=	max(case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end) 
+,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
+from sys.dm_os_performance_counters
+) 
 as p
 inner join cte c on p.InstanceName = c.InstanceName
 inner join (SELECT 'InstanceName' = @@SERVERNAME 
