@@ -8,6 +8,8 @@ select
 	, LatestBackupDate = max(a.BackupFinishDate)
 	, LatestBackupStartDate = max(a.BackupStartDate)
 	, LatestBackupLocation = max(a.physical_device_name)
+	, backup_size_mb			 = max(backup_size_mb)
+	, compressed_backup_size_mb	 = max(compressed_backup_size_mb)
 	, d.state_desc
  from sys.databases d
  inner join (	select * from (
@@ -23,6 +25,9 @@ select
 						, BackupFinishDate	=	bs.backup_finish_date
 						, BackupStartDate	=	bs.backup_start_date
 						, physical_device_name 
+						, backup_size_mb			=	bs.backup_size / 1024./1024.
+						, compressed_backup_size_mb =	bs.compressed_backup_size /1024./1024.
+	
 						, latest = Row_number() OVER (PARTITION BY database_name, type order by backup_finish_date desc)
 						from msdb.dbo.backupset bs					
 						left outer join msdb.dbo.[backupmediafamily] bf
@@ -34,14 +39,14 @@ select
 					 select 
 						db_name(d.database_id)
 						, backuptype = 'Database'
-						, null, null, null, null
+						, null, null, null, null, null, null
 						FROM master.sys.databases d
 						group by db_name(d.database_id)
 					 UNION
 					 select 
 						db_name(d.database_id)
 						, backuptype = 'Transaction Log'
-						, null, null, null, null
+						, null, null, null, null, null, null
 					  FROM master.sys.databases d
 					  where d.recovery_model_desc in ('FULL', 'BULK_LOGGED')
 					  group by db_name(d.database_id)
@@ -52,9 +57,8 @@ group by
 	  a.database_name
 	, a.backuptype 
 	, d.recovery_model_desc
-	, d.state_desc
+	, d.state_desc 
 order by a.backuptype, d.recovery_model_desc, max(a.BackupFinishDate) asc, a.database_name asc
- 
  go
  
 
