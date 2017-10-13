@@ -246,5 +246,38 @@ ALTER DATABASE [w] MODIFY FILE ( NAME=N'w2016_log', SIZE=16001MB );
 GO
 */
 
+/*
 
+--Sample usage
+
+USE [Tfs_Warehouse]
+DBCC SHRINKFILE (N'Tfs_Warehouse_log' , 0, TRUNCATEONLY);
+GO
+USE [master]
+--Original Size 1024.00 MB
+ALTER DATABASE [Tfs_Warehouse] MODIFY FILE ( NAME=N'Tfs_Warehouse_log', SIZE=1024MB );
+GO
+
+
+
+USE [Tfs_SparkyBox]
+DBCC SHRINKFILE (N'Tfs_SparkyBox_log' , 0, TRUNCATEONLY);
+GO
+USE [master]
+--Original Size 356.00 MB
+ALTER DATABASE [Tfs_SparkyBox] MODIFY FILE ( NAME=N'Tfs_SparkyBox_log', SIZE=356MB );
+GO
+
+
+USE [Tfs_Configuration]
+DBCC SHRINKFILE (N'Tfs_Configuration_log' , 0, TRUNCATEONLY);
+GO
+USE [master]
+--Original Size 1024.00 MB
+ALTER DATABASE [Tfs_Configuration] MODIFY FILE ( NAME=N'Tfs_Configuration_log', SIZE=1024MB );
+GO
+
+
+
+*/
 	
