@@ -3,6 +3,10 @@
 -- Rampant use of COLLATE sql_latin1_general_cp1_cs_as is to allow for case sensitivity in databases with case insensitive collation.
 -- Passwords are case sensitive.
 
+--First, check for sql logins without policy.
+select name, is_policy_checked from sys.sql_logins where is_policy_checked =0
+
+
 use master
 go
 drop table 
@@ -151,6 +155,5 @@ cross apply #easypasswords e
 where PWDCOMPARE(e.pw, l.password_hash) = 1
 group by l.name, e.pw  COLLATE sql_latin1_general_cp1_cs_as
 
-select name, is_policy_checked from sys.sql_logins where is_policy_checked =0
 
 
