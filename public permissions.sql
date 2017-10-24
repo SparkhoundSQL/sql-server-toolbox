@@ -128,7 +128,52 @@ BEGIN
 	and (obj.is_ms_shipped = 0 or obj.is_ms_shipped is null) 
 	--Ignore system sprocs (be aware of your naming conventions!)
 	--and (obj.name not like ''sp_%'' or obj.name is null)
+	--Ignore SSMS Diagramming Objects
+	AND (ISNULL(QUOTENAME(s.name ) + ''.'','''') + QUOTENAME(obj.name COLLATE database_default) + CASE WHEN cl.name COLLATE database_default is null THEN '''' ELSE ''.'' + QUOTENAME(cl.name COLLATE database_default) END)
+	NOT IN (''[dbo].[fn_diagramobjects]'',
+			''[dbo].[sp_helpdiagrams]'',
+			''[dbo].[sp_helpdiagramdefinition]'',
+			''[dbo].[sp_creatediagram]'',
+			''[dbo].[sp_renamediagram]'',
+			''[dbo].[sp_alterdiagram]'',
+			''[dbo].[sp_dropdiagram]'')
+	--Ignore Database Tuning Advisor Objects
+	AND (ISNULL(QUOTENAME(s.name ) + ''.'','''') + QUOTENAME(obj.name COLLATE database_default) + CASE WHEN cl.name COLLATE database_default is null THEN '''' ELSE ''.'' + QUOTENAME(cl.name COLLATE database_default) END)
+	NOT IN (''[dbo].[dt_generateansiname]'',
+			''[dbo].[dt_adduserobject]'',
+			''[dbo].[dtproperties]'',
+			''[dbo].[dt_setpropertybyid]'',
+			''[dbo].[dt_getobjwithprop]'',
+			''[dbo].[dt_getpropertiesbyid]'',
+			''[dbo].[dt_setpropertybyid_u]'',
+			''[dbo].[dt_getobjwithprop_u]'',
+			''[dbo].[dt_getpropertiesbyid_u]'',
+			''[dbo].[dt_dropuserobjectbyid]'',
+			''[dbo].[dt_droppropertiesbyid]'',
+			''[dbo].[dt_verstamp006]'',
+			''[dbo].[dt_verstamp007]'',
+			''[dbo].[dt_getpropertiesbyid_vcs]'',
+			''[dbo].[dt_displayoaerror]'',
+			''[dbo].[dt_adduserobject_vcs]'',
+			''[dbo].[dt_addtosourcecontrol]'',
+			''[dbo].[dt_checkinobject]'',
+			''[dbo].[dt_checkoutobject]'',
+			''[dbo].[dt_isundersourcecontrol]'',
+			''[dbo].[dt_removefromsourcecontrol]'',
+			''[dbo].[dt_validateloginparams]'',
+			''[dbo].[dt_vcsenabled]'',
+			''[dbo].[dt_whocheckedout]'',
+			''[dbo].[dt_getpropertiesbyid_vcs_u]'',
+			''[dbo].[dt_displayoaerror_u]'',
+			''[dbo].[dt_addtosourcecontrol_u]'',
+			''[dbo].[dt_checkinobject_u]'',
+			''[dbo].[dt_checkoutobject_u]'',
+			''[dbo].[dt_isundersourcecontrol_u]'',
+			''[dbo].[dt_validateloginparams_u]'',
+			''[dbo].[dt_whocheckedout_u]'')
+
 	order by Object_Type_Desc, Principal_Name';
+
 
 	exec (@TSQL);
 	select @x = @x + 1;
