@@ -5,8 +5,8 @@
 --shows the number of VLF's. CreateLSN=0 for the original created files.
 --filesize /1024, *8 to get MB 
 --Ideally <50 VLF's per tlog. 
---Ideally VLF sizes between 256MB and 1024MB
---IF log >8 GB, Recreate log in 8gb increments.
+--Ideally VLF sizes between 64MB and 1024MB
+--IF log >8 GB, Recreate log in 8000 MB increments.
 
 --Shrink/regrow step only works for databases with one log file. Why do you have more than one log file anyway? Stop. Think. Ask yourself.
 
@@ -57,7 +57,7 @@ IF @T IS NOT NULL BEGIN
 	SELECT DB_NAME()+'' log file excessive VLFs.''
 	IF @Avg_MB > 1024 
 	SELECT DB_NAME()+'' log file VLFs are too large.''
-	IF @Avg_MB < 256
+	IF @Avg_MB < 64
 	SELECT DB_NAME()+'' log file VLFs are too small.''
 	print  @T
 END	
@@ -70,7 +70,7 @@ Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs'';
 DECLARE @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @Log_curr bigint, @T nvarchar(4000), @LNeed int, @Accu bigint
 SELECT @Log_MB=sum(convert(bigint, mf.size))*8./1024. FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
 SELECT @VLFCo=Count_big(StartOffset) , @Avg_MB=@Log_MB / Count_big(StartOffset) from #Log
-IF ((@VLFCo>50) OR (@Avg_MB>1024) OR (@Avg_MB<256)) AND (@Log_MB>8000)
+IF ((@VLFCo>50) OR (@Avg_MB>1024) OR (@Avg_MB<64)) AND (@Log_MB>8000)
 BEGIN
 SELECT DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
 SELECT @LCnt=1, @Accu=0
@@ -105,8 +105,8 @@ IF @T IS NOT NULL BEGIN
 set @T=@T+''
 ''
 IF @VLFCo  > 50 SELECT DB_NAME()+'' excessive VLF count.'';
-IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs are too large on avg.'';
-IF @Avg_MB < 256 SELECT DB_NAME()+'' VLFs are too small on avg.'';
+IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs are too large on avg.''; --Not sure if actually possible 
+IF @Avg_MB < 64 SELECT DB_NAME()+'' VLFs are too small on avg.'';
 print @T;
 END
 Truncate Table #Log;'
@@ -120,6 +120,7 @@ More reference
 ----https://www.red-gate.com/simple-talk/sql/database-administration/sql-server-transaction-log-fragmentation-a-primer/
 ---"If you need a 2GB log then just create that as one step. 
 ---If you need a 20GB log, create that as 8GB, then extend it to 16GB and then to 20GB"
+--Optimal size for Avg_MB for VLF's is 500MB.
 
 --displays each transaction log size and space used. 
 --Dbcc sqlperf (logspace)  --replaced, look for "space in log files.sql"
