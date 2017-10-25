@@ -82,59 +82,59 @@ union
 select left(pw COLLATE sql_latin1_general_cp1_cs_as,7) from #easypasswords e where len(pw) > 7 	 group by pw COLLATE sql_latin1_general_cp1_cs_as
 
 insert into #easypasswords (pw)
-select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1') from #easypasswords	 group by pw  COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords	 group by pw  COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1') from #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1') from #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1') from #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1') from #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
-union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$') from #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+select pw= replace(pw COLLATE sql_latin1_general_cp1_cs_as,'i','1' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords	 group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'e','3' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'a','@' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'o','0' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
+union select replace(pw COLLATE sql_latin1_general_cp1_cs_as,'s','$' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords group by pw COLLATE sql_latin1_general_cp1_cs_as
 
 insert into #easypasswords (pw)
-select upper(pw COLLATE sql_latin1_general_cp1_cs_as) from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select upper(pw COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select lower(pw COLLATE sql_latin1_general_cp1_cs_as) from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select lower(pw COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
 select cast(upper(left(pw COLLATE sql_latin1_general_cp1_cs_as, 1)) as char(1)) + cast(substring(pw COLLATE sql_latin1_general_cp1_cs_as,2,399) as varchar(399)) 
 from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 
 --permutations
 insert into #easypasswords (pw)
-select CONCAT(pw COLLATE sql_latin1_general_cp1_cs_as, '1') from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select CONCAT(pw COLLATE sql_latin1_general_cp1_cs_as, '1' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select CONCAT(pw  COLLATE sql_latin1_general_cp1_cs_as, '123') from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select CONCAT(pw  COLLATE sql_latin1_general_cp1_cs_as, '123' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select CONCAT(pw COLLATE sql_latin1_general_cp1_cs_as , '!') from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select CONCAT(pw COLLATE sql_latin1_general_cp1_cs_as , '!' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw) 
-select CONCAT(pw  COLLATE sql_latin1_general_cp1_cs_as, '1') from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select CONCAT(pw  COLLATE sql_latin1_general_cp1_cs_as, '1' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select CONCAT(pw  COLLATE sql_latin1_general_cp1_cs_as, '!') from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select CONCAT(pw  COLLATE sql_latin1_general_cp1_cs_as, '!' COLLATE sql_latin1_general_cp1_cs_as  ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select CONCAT('1' , pw COLLATE sql_latin1_general_cp1_cs_as) from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select CONCAT('1' COLLATE sql_latin1_general_cp1_cs_as  , pw COLLATE sql_latin1_general_cp1_cs_as   ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 insert into #easypasswords (pw)
-select CONCAT('!' , pw COLLATE sql_latin1_general_cp1_cs_as) from #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
+select CONCAT('!' COLLATE sql_latin1_general_cp1_cs_as  , pw COLLATE sql_latin1_general_cp1_cs_as   ) FROM #easypasswords e group by pw COLLATE sql_latin1_general_cp1_cs_as
 
 --Remove duplicates, case-sensitive 
 delete e 
