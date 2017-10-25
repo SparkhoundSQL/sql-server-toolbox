@@ -1,3 +1,5 @@
+#Must launch PowerShell as an Administrator to read from the Security log
+
 $NumDays = -7
 $EventLog_Application = Get-EventLog -LogName "Application" -After (Get-Date).AddDays($NumDays) | 
     ? { $_.entryType -Match "Error" -and "Critical" -and "Warning" } | Group-Object -Property EventID |
