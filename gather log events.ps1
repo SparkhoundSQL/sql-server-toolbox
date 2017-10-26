@@ -18,7 +18,8 @@ $EventLog_Security = Get-EventLog -LogName "Security" -After (Get-Date).AddDays(
     Select-Object LogSource, Count, @{name="Latest";expression={$_.TimeGenerated}}, EventID, Source, Message ;
 @( $EventLog_System; $EventLog_Application; $EventLog_Security) | Out-GridView;
 
- <#
+
+<#
 ## Version that works on PowerShell 2.0 because of Add-Member and Out-Gridview dependencies aren't supported until 3.0
 
 clear-host
@@ -66,7 +67,6 @@ Get-EventLog -LogName "Security" -After (Get-Date).AddDays($numDays) |
     $obj.Message = $latestMessage.Message
     $eventLog_Application += $obj
     }
-$eventLog_Application  | Sort-Object -Property Count, Latest -Descending  | Format-Table -Wrap -AutoSize
+$eventLog_Application  | Sort-Object -Property Count, Latest -Descending  | Export-Csv -Path "C:\temp\export.csv" -Encoding ascii -NoTypeInformation
 
 #>
-
