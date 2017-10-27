@@ -30,7 +30,7 @@
 	on d.database_id = g.DatabaseID
 	WHERE g.eventclass = te.trace_event_id
 	and		te.name in ('Data File Auto Grow','Log File Auto Grow')
-	and		g.StartTime > CURRENT_TIMESTAMP -1
+	and		g.StartTime > dateadd(d, -7, sysdatetime()) 
 	--GROUP BY StartTime,Databaseid, Filename, IntegerData, Duration
 	order by StartTime desc
 
