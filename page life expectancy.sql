@@ -22,8 +22,7 @@ select
 ,	Target_Server_Mem_GB =	max(case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end)
 ,	Total_Server_Mem_GB	=	max(case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end) 
 ,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
-FROM sys.dm_os_performance_counters
-WHERE counter_name = 'Page life expectancy'
+from sys.dm_os_performance_counters
 ) 
 as p
 inner join cte c on p.InstanceName = c.InstanceName
