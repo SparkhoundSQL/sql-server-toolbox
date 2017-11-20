@@ -13,7 +13,7 @@ select
 ,	c.[Max Server Mem (MB)]
 ,	p.Target_Server_Mem_GB	
 ,	p.Total_Server_Mem_GB	
-,	p.PLE_s --300s is only a rule for smaller memory servers (<16gb)
+,	p.PLE_s --300s is only an arbitrary rule for smaller memory servers (<16gb), for larger, it should be baselined and measured.
 ,	'Churn (MB/s)'			=	cast((p.Total_Server_Mem_GB)/1024./NULLIF(p.PLE_s,0) as decimal(19,2))
 ,	si.LPIM -- Works on SQL 2016 SP1 and above only
 from(
@@ -22,7 +22,9 @@ select
 ,	Target_Server_Mem_GB =	max(case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end)
 ,	Total_Server_Mem_GB	=	max(case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end) 
 ,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
+--select * 
 from sys.dm_os_performance_counters
+--This only looks at one NUMA node. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
 ) 
 as p
 inner join cte c on p.InstanceName = c.InstanceName
@@ -40,6 +42,8 @@ cross apply (select LPIM = CASE sql_memory_model_Desc
 					WHEN 'LARGE_PAGES' THEN 'Lock Pages in Memory privilege is granted in Enterprise mode with Trace Flag 834 ON'
 					END from sys.dm_os_sys_info 
 				) as si
+
+
 
 
 
