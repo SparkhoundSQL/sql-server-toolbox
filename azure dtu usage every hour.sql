@@ -41,5 +41,5 @@ select
 from 
 master.sys.resource_stats as rs  --past 14 days only
 group by Database_Name, sku, dtu_limit, datetimefromparts(year(rs.end_time), month(rs.end_time), day(rs.end_time), datepart(hh,rs.end_time), 0,0,0)
-order by Database_Name desc
+order by Database_Name desc, TimeStamp DESC 
 
