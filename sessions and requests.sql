@@ -3,6 +3,7 @@
 	declare @showallspids bit, @showinternalgroup bit 
 	select	@showallspids = 1-- 1= show all sessions, 0= show only active requests
 		,	@showinternalgroup = 1 -- 1= show internal sessions, 0= ignore internal sessions based on RG group_id
+									-- The @showinternalgroup flag does NOT work for Standard edition because all queries show in the same Resource Group
 
 	create table #ExecRequests  (
 		id int IDENTITY(1,1) PRIMARY KEY
@@ -57,6 +58,8 @@
 	and		(@showallspids = 1 or r.session_id is not null) 
 	and		(@showinternalgroup = 1 or s.Group_Id > 1)
 	print 'insert done'
+
+	
 
 	update #ExecRequests 
 	set blocking_these = LEFT((select isnull(convert(varchar(5), er.session_id),'') + ', ' 
