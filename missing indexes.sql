@@ -1,6 +1,17 @@
 
 SELECT 
 	mid.statement
+/*
+,	create_index_statement_2017 =	'CREATE NONCLUSTERED INDEX IDX_NC_' + replace(t.name, ' ' ,'')
+	+ TRANSLATE(ISNULL(replace(mid.equality_columns, ' ' ,''),'') , '],[' ,' _ ') --Translate is supported for SQL 2017+
+	+ TRANSLATE(ISNULL(replace(mid.inequality_columns, ' ' ,''),''), '],[' ,' _ ')
+	+ ' ON ' + statement 
+	+ ' (' + ISNULL (mid.equality_columns,'') 
+    + CASE WHEN mid.equality_columns IS NOT NULL AND mid.inequality_columns IS NOT NULL THEN ',' ELSE '' END 
+    + ISNULL (mid.inequality_columns, '')
+	+ ')' 
+	+ ISNULL (' INCLUDE (' + mid.included_columns + ')', '')  COLLATE SQL_Latin1_General_CP1_CI_AS
+*/
 ,	create_index_statement	=	'CREATE NONCLUSTERED INDEX IDX_NC_' + replace(t.name, ' ' ,'')
 	+ replace(replace(replace(ISNULL(replace(mid.equality_columns, ' ' ,''),'') , '],[' ,'_'),'[','_'),']','') 
 	+ replace(replace(replace(ISNULL(replace(mid.inequality_columns, ' ' ,''),''), '],[' ,'_'),'[','_'),']','') 
@@ -36,7 +47,3 @@ and mid.database_id = db_id()
 --order by avg_user_impact * avg_total_user_cost desc 
 order by create_index_statement
 
-/*
-
-
-*/
