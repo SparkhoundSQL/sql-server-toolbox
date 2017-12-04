@@ -1,6 +1,6 @@
 #Must launch PowerShell as an Administrator to read from the Security log
 
-$NumDays = -7
+$NumDays = -30
 $EventLog_Application = Get-EventLog -LogName "Application" -After (Get-Date).AddDays($NumDays) | 
     ? { $_.entryType -Match "Error" -and "Critical" -and "Warning" } | Group-Object -Property EventID |
     ForEach-Object { $_.Group[0] | Add-Member -PassThru -NotePropertyName Count -NotePropertyValue $_.Count | Add-Member -PassThru -NotePropertyName LogSource -NotePropertyValue "Application" } |
@@ -23,7 +23,7 @@ $EventLog_Security = Get-EventLog -LogName "Security" -After (Get-Date).AddDays(
 ## Version that works on PowerShell 2.0 because of Add-Member and Out-Gridview dependencies aren't supported until 3.0
 
 clear-host
- $numDays = -7
+ $numDays = -30
 $eventLog_Application = @()
 Get-EventLog -LogName "Application" -After (Get-Date).AddDays($numDays) | 
     Where-Object {$_.EntryType -match "Error" -or "Critical" -or "Warning"} | 
