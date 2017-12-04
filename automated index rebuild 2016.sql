@@ -1,6 +1,6 @@
 /* Automated index maint script
 Added by William Assaf, Sparkhound 20140304
-Last Modified by William Assaf, Sparkhound 20170922, integrated smart stats updates
+Last Modified by William Assaf, Sparkhound 20171204, tweaked criteria for stats updates
 --Primary objective is to never perform an offline index rebuild unless it is the only option.
 */
 --#TODO For each database:
@@ -331,9 +331,9 @@ BEGIN TRY
 			declare @tsqllist table (id int not null identity(1,1) primary key, SchemaName sysname, ObjectName sysname, tsqltext nvarchar(4000) not null) 
 			
 			insert into @tsqllist ( SchemaName, ObjectName, tsqltext) 
-			 SELECT distinct
-						s.Name AS SchemaName 
-					  , o.Name AS ObjectName 
+			SELECT distinct
+						s.name AS SchemaName 
+					  , o.name AS ObjectName 
 					 -- , STA.name AS StatName 
 					 -- , Object_Type = ISNULL(i.type_desc + ' Index', 'Statistics Object')
 					 -- , Stats_Last_Updated = ISNULL(sp.last_updated, o.create_date)
@@ -349,6 +349,8 @@ BEGIN TRY
 			--						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
 									MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN ' ON PARTITIONS (' + cast(p.partition_number as varchar(5)) + ') ' ELSE '' END
 								END
+							+ '--Pct updated ' + ISNULL(convert(varchar(50), round((convert(decimal(19,2), sp.modification_counter)/sp.[rows]),2)),'') + ', Last Updated ' + ISNULL(convert(varchar(30), sp.last_updated),'')
+						--	, sp.*
 			   FROM sys.objects  o   
 					 INNER JOIN sys.stats STA ON STA.object_id = o.object_id  
 						CROSS APPLY sys.dm_db_stats_properties (STA.object_id, STA.stats_id) sp -- Only works in SQL2008R2SP2+ or SQL2012SP1+
@@ -359,7 +361,7 @@ BEGIN TRY
 						and (i.type_desc not like '%columnstore%')
 					 LEFT OUTER join sys.dm_db_partition_stats p 
 						on (
-						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
+						STA.is_incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
 						p.object_id = o.object_id  and 
 						i.index_id = p.index_id
 						)
@@ -374,16 +376,30 @@ BEGIN TRY
 					 ) AS IUS 
 						 ON IUS.object_id = STA.object_id 
 				WHERE o.type IN ('U', 'V')    -- only user tables and views 
-					  AND DATEDIFF(d, ISNULL(STATS_DATE(STA.object_id, STA.stats_id), N'1900-01-01')  , IUS.LastUpdate) > 30 --indexes that haven''t been updated in the last month
-					  AND sp.modification_counter > 10000
+		  				AND 
+						(
+							((sp.modification_counter*1./sp.[rows]) > 1.0 --as many updates as rows in this table!
+							AND sp.[rows] > 1000 --1000 is arbitrary
+							)
+							OR
+							(sp.last_updated is null and sp.[rows] > 10000) --big enough tables should have stats updated, 10000 is arbitrary
+							OR
+							(DATEDIFF(d, ISNULL(sp.last_updated, N'1900-01-01')  , IUS.LastUpdate) > 30 --indexes that haven''t been updated in the last month
+								AND (sp.modification_counter*1./sp.[rows]) > .3 --changes equal 30% of rows, an arbitrary line to cross
+								and sp.[rows] > 10000
+							)	
+						)
+				--ORDER BY sp.[rows] desc
 				OPTION (MAXDOP 1);
 
 			--select * from @tsqllist
 
 			declare @s int = 1, @scount int = null, @runtsql nvarchar(4000) = null
 			select @scount = max(id) from @tsqllist l
+						
 			while (@s <= @scount)
 			BEGIN
+					print 'beginning stats'
 					--Check that we are still in  time frame
 					select @currenthour	=	datepart(hour, sysdatetime())
 					IF(@StartWindow > @EndWindow -- wraps midnight
@@ -401,7 +417,6 @@ BEGIN TRY
 						OR
 						@TestMode = 1
 					BEGIN
-						print 'beginning stats'
 						--actually executes the scripts.
 						select	@runtsql = tsqltext
 							,	@ObjectName = ObjectName
@@ -433,7 +448,7 @@ BEGIN TRY
 					set @s = @s + 1
 			END
 		
-			--print 'end update stats'
+			print 'end update stats'
 		END
 
 		--IF @TestMode = 0 
