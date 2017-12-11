@@ -7,7 +7,7 @@ declare @readerrorlog table
 , [LogMessageText] nvarchar(4000) not null 
 )
 declare @lognumber int = 0
-WHILE (((select min(logdate) from @readerrorlog) 
+WHILE (((select min(LogDate) from @readerrorlog) 
 			> (select dateadd(month,-1, getdate()))) or @lognumber = 0) --Include any logs from the last month
 BEGIN
 
@@ -34,4 +34,4 @@ where  1=1
 --)
 --and LogMessageText not like '%without errors%'
 --and LogMessageText not like '%informational%'
-order by logdate desc
+order by LogDate desc
