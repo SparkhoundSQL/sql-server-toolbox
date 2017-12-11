@@ -23,42 +23,35 @@ from msdb.dbo.sysjobs  j
 where j.notify_email_operator_id = 0  
 and j.name not in ('syspolicy_purge_history')
 
-declare @tsql nvarchar(4000) = null
+declare @TSQL nvarchar(4000) = null
 OPEN AddFailureNotifications
 FETCH NEXT FROM AddFailureNotifications 
-INTO @tsql
+INTO @TSQL
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
 	EXEC (@TSQL)
 	SELECT @TSQL
 	FETCH NEXT FROM AddFailureNotifications 
-	INTO @tsql
+	INTO @TSQL
 END
 
 CLOSE AddFailureNotifications
 DEALLOCATE AddFailureNotifications;
 
 /*
-
-
 --Change the operator name dbadministrators@sparkhound.com
 --you may need to change the @server_name value below
-
 USE [msdb]
 GO
-
 BEGIN TRANSACTION
 DECLARE @ReturnCode INT
 SELECT @ReturnCode = 0
-
 IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
 BEGIN
 EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
 IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
-
 END
-
 DECLARE @jobId BINARY(16)
 EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Add Failure Notifications', 
 		@enabled=1, 
@@ -72,7 +65,6 @@ EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Add Failure Notifications',
 		@owner_login_name=N'sa', 
 		@notify_email_operator_name=N'dbadministrators@sparkhound.com', @job_id = @jobId OUTPUT
 IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
-
 EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'tsql', 
 		@step_id=1, 
 		@cmdexec_success_code=0, 
@@ -85,7 +77,6 @@ EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'tsql',
 		@os_run_priority=0, @subsystem=N'TSQL', 
 		@command=N'USE [msdb]
 GO
-
 DECLARE AddFailureNotifications CURSOR FAST_FORWARD 
 FOR
 select convert(nvarchar(4000),	''
@@ -96,12 +87,10 @@ EXEC msdb.dbo.sp_update_job @job_id=N''''''+convert(varchar(64), job_id)+'''''',
 		@notify_email_operator_name=N''''dbadministrators@sparkhound.com'''''')
 from msdb.dbo.sysjobs 
 where notify_email_operator_id = 0
-
 declare @tsql nvarchar(4000) = null
 OPEN AddFailureNotifications
 FETCH NEXT FROM AddFailureNotifications 
 INTO @tsql
-
 WHILE @@FETCH_STATUS = 0
 BEGIN
 	EXEC (@TSQL)
@@ -134,7 +123,5 @@ GOTO EndSave
 QuitWithRollback:
     IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
 EndSave:
-
 GO
-
 */
