@@ -1,4 +1,3 @@
-
 SELECT @@SERVERNAME
 
 
@@ -22,7 +21,7 @@ order by rm.permission_name, u.name
 
 --Database role membership
 --Multi Database
-declare @tsql nvarchar(4000) = 'use [?]; 
+declare @TSQL nvarchar(4000) = 'use [?]; 
 SELECT DB_NAME();
 SELECT DISTINCT	QUOTENAME(r.name) as database_role_name, r.type_desc, QUOTENAME(d.name) as principal_name, d.type_desc
 ,	Add_TSQL = ''EXEC sp_addrolemember @membername = N'''''' + d.name COLLATE DATABASE_DEFAULT + '''''', @rolename = N'''''' + r.name + ''''''''
@@ -32,13 +31,13 @@ inner join sys.database_principals r on rm.role_principal_id = r.principal_id
 inner join sys.database_principals d on rm.member_principal_id = d.principal_id
 where d.name = ''public''
 ';
-exec sp_msforeachdb @tsql
-go
+EXEC sp_msforeachdb @TSQL
+GO
 
 --Multi-database database permissions
 --script is too long for sp_msforeachdb, had to roll our own.
 
-declare @tsql varchar(8000) = null, @dbcount int = 0, @x int = 0, @dbname varchar(256) = null
+declare @TSQL varchar(8000) = null, @dbcount int = 0, @x int = 0, @dbname varchar(256) = null
 declare @dblist table (id int not null identity(1,1) primary key, dbname varchar(256)  not null )
 insert into @dblist (dbname)
 select name from sys.databases where name <> 'tempdb' and state_desc = 'ONLINE' 
@@ -49,7 +48,7 @@ while (@x <= @dbcount)
 BEGIN
 	select @dbname = dbname from @dblist d where @x = d.id;
 
-	select @tsql = 	'USE [' + @dbname  + '];
+	select @TSQL = 	'USE [' + @dbname  + '];
 	SELECT DB_NAME();
 	SELECT	Permission_State_Desc	=	perm.state_desc
 		,	Permission_Name			=	perm.permission_name 
@@ -68,7 +67,6 @@ BEGIN
 			, *
 	FROM sys.database_permissions AS perm 
 	INNER JOIN sys.database_principals AS u	ON perm.grantee_principal_id = u.principal_id
-
 	LEFT OUTER JOIN (--https://msdn.microsoft.com/en-us/library/ms188367.aspx			
 						select name, object_id, schema_id, is_ms_shipped, class_desc=''OBJECT'', type_desc from sys.objects 
 						union all
@@ -171,14 +169,10 @@ BEGIN
 			''[dbo].[dt_isundersourcecontrol_u]'',
 			''[dbo].[dt_validateloginparams_u]'',
 			''[dbo].[dt_whocheckedout_u]'')
-
 	order by Object_Type_Desc, Principal_Name';
 
 
 	exec (@TSQL);
 	select @x = @x + 1;
 END
-
-
-
 
