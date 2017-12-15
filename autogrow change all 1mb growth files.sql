@@ -2,14 +2,20 @@
 
 USE [master]
 GO
-select 'ALTER DATABASE ['+d.name+'] MODIFY FILE ( NAME = N'''+ mf.name+ ''', FILEGROWTH = 512000KB )'
+select 
+Alter_Autogrowth_Rates = case when mf.type_desc = 'ROWS' 
+	then 'ALTER DATABASE ['+d.name+'] MODIFY FILE ( NAME = N'''+ mf.name+ ''', FILEGROWTH = 512MB );
+GO' 
+	else 'ALTER DATABASE ['+d.name+'] MODIFY FILE ( NAME = N'''+ mf.name+ ''', FILEGROWTH = 256MB );
+GO' 
+	end
 , mf.*
 FROM sys.databases d
 inner join sys.master_files mf
 on d.database_id = mf.database_id
-where mf.is_percent_growth = 0 and growth = 128
-
+where d.state_desc = 'ONLINE'
+and (mf.is_percent_growth = 0 and growth = 128)
+or (mf.is_percent_growth = 1)
 /*
 ALTER DATABASE [model] MODIFY FILE ( NAME = N'modeldev', FILEGROWTH = 512000KB )
-
 */
