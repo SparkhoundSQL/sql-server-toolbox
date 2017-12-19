@@ -1,4 +1,4 @@
---Script to identify incorrect recovery models for Sharepoint, according to Microsoft/EA suggestions 
+--Script to identify incorrect recovery models for Sharepoint. These recovery model assumptions/suggestions are based on the Microsoft/EA suggestions found here: https://technet.microsoft.com/en-us/library/cc678868(v=office.16).aspx
 IF OBJECT_ID('tempdb..#SharepointRecovery') IS NOT NULL
     BEGIN
 	   DROP TABLE #SharepointRecovery;
@@ -56,7 +56,7 @@ INTO #SharepointRecovery
 FROM sys.databases
 WHERE 1=1
 	AND state_desc = 'ONLINE'
-    AND is_read_only = 0
+    AND is_read_only = 0;
 
 
 --Find incorrect recovery models
@@ -95,7 +95,7 @@ WHERE	(DatabaseType = 'Configuration' and recovery_model_desc = 'SIMPLE') --conf
 	 OR	(DatabaseType = 'Service Bus Management' and recovery_model_desc = 'FULL') --Service Bus Management databases should be in SIMPLE recovery
 	 OR	(DatabaseType = 'Workflow' and recovery_model_desc = 'SIMPLE') --Workflow databases should be in FULL recovery
 	 OR	(DatabaseType = 'Service Bus' and recovery_model_desc = 'SIMPLE') --Service Bus databases should be in FULL recovery
-ORDER BY recovery_model_desc, databasetype
+ORDER BY recovery_model_desc, databasetype;
 
 /*--List of all databases, types, and current recovery models
 SELECT	 [Database Name] =				name
@@ -103,4 +103,6 @@ SELECT	 [Database Name] =				name
 		,[State] =						state_desc
 		,[Current Recovery Model] =		recovery_model_desc
 FROM #SharepointRecovery
-ORDER BY databasetype*/
+ORDER BY databasetype;*/
+
+DROP TABLE #SharepointRecovery;
