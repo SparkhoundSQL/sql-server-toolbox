@@ -18,7 +18,7 @@ $PrimaryReplicaName = "SQLSERVER-0"
 $PrimaryReplicaInstanceName = "SQL2K17" #Named instance or DEFAULT for the default instance
 $SecondaryReplicaName1 = "SQLSERVER-1"
 $SecondaryReplicaInstanceName1 = "SQL2K17" #Named instance or DEFAULT for the default instance
-$AvailabilityGroupName = "WWI2017-clusterless"
+$AvailabilityGroupName = "WWI2017-AG"
 
 #Inventory and test
 Get-ChildItem "SQLSERVER:\Sql\$($PrimaryReplicaName)\$($PrimaryReplicaInstanceName)\AvailabilityGroups\$($AvailabilityGroupName)\AvailabilityReplicas\" | Test-SqlAvailabilityReplica | Format-Table
@@ -81,16 +81,3 @@ Get-ChildItem "SQLSERVER:\Sql\$($SecondaryReplicaName1)\$($SecondaryReplicaInsta
 } -ComputerName $SecondaryReplicaName1  -Args $SecondaryReplicaName1, $SecondaryReplicaInstanceName1, $AvailabilityGroupName, $PrimaryReplicaName, $PrimaryReplicaInstanceName
 
 Write-Output "End $(Get-Date)"
-
-
-
-    #1-3 Set routing list. 
-    #MUST RUN ON NEW PRIMARY NODE
-
-    #Note that the values here of Primary and Secondary1 are flipped, because the variables predate the failover.
-    Set-SqlAvailabilityReplica `
-        -ReadOnlyRoutingList $PrimaryReplicaName,$SecondaryReplicaName1 `
-        -InputObject $SecondaryReplicaName1 `
-        -ErrorAction Stop
-
-    #Must change WSFC Cluster quorum now to force Quorum
