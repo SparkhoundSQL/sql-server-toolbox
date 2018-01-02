@@ -99,7 +99,7 @@ CROSS APPLY sys.dm_os_performance_counters where counter_name like 'Log Bytes Fl
 declare @LogBytesFushed decimal(19,2) 
 set @LogBytesFushed = (@BytesFlushed_End - @BytesFlushed_Start) / NULLIF(@BytesFlushed_End_ms - @BytesFlushed_Start_ms,0)
 
-select * from @TransactionDelay
+--select * from @TransactionDelay
 
 select 
 	AG					= ag.name
@@ -117,7 +117,7 @@ select
 --Transaction Delay numbers will be 0 if there is no synchronous replica for the DB
 ,	Avg_Sampled_Transaction_Delay_ms_per_s	= convert(decimal(19,2), (td.TransactionDelay_end - td.TransactionDelay_Start) / ((td.TransactionDelay_end_ms - td.TransactionDelay_Start_ms)/1000.))
 ,	Transactions_per_s	= convert(decimal(19,2), ((td.MirroredWriteTranspersec_end - td.MirroredWriteTranspersec_start) / ((td.MirroredWriteTranspersec_End_ms - td.MirroredWriteTranspersec_Start_ms)/1000.)))
-,	dm.secondary_lag_seconds 
+,	dm.secondary_lag_seconds --sql 2016 and above only
 ,	dm.synchronization_state_desc 
 ,	dm.synchronization_health_desc
 ,	ar.availability_mode_desc

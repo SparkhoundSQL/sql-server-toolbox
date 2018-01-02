@@ -84,7 +84,9 @@ BEGIN
 	
 	--actually executes the scripts.
 	select @runtsql = tsqltext from @tsqllist where id = @s
-	exec sp_executesql @runtsql
+	--uncomment to 
+	--exec sp_executesql @runtsql
+
 	
 	set @s = @s + 1
 	

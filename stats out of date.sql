@@ -48,8 +48,8 @@
          ) AS IUS 
              ON IUS.object_id = STA.object_id 
     WHERE o.type IN ('U', 'V')    -- only user tables and views 
-          --AND DATEDIFF(d, ISNULL(STATS_DATE(STA.object_id, STA.stats_id), N'1900-01-01')  , IUS.LastUpdate) > 30 --indexes that haven''t been updated in the last month
-		  --AND sp.modification_counter > 10000
+          AND DATEDIFF(d, ISNULL(STATS_DATE(STA.object_id, STA.stats_id), N'1900-01-01')  , IUS.LastUpdate) > 30 --indexes that haven''t been updated in the last month
+		  AND sp.modification_counter > 10000
     ORDER BY Rows_Changed desc, Stats_Last_Updated desc
 	OPTION (MAXDOP 1);
 
