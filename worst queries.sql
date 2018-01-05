@@ -30,6 +30,7 @@ select top 15
 		, ReasonforEarlyTermination = CASE WHEN tqp.query_plan LIKE '%StatementOptmEarlyAbortReason%' THEN substring(substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21), 1, ISNULL(ABS(charindex('"',substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21),1)-1),0))
 											ELSE NULL END 
 		, QueryPlan		=	qp.query_plan	
+		, PlanHandle	=	p.plan_handle
 		FROM 
 		(
 		  SELECT 
@@ -61,10 +62,9 @@ select top 15
 		  AND (CONVERT(nvarchar(max), sql.[text])) not like '%StatementOptmEarlyAbortReason%'
 		  --AND (tqp.query_plan LIKE '%StatementOptmEarlyAbortReason="TimeOut%' or tqp.query_plan LIKE '%StatementOptmEarlyAbortReason="Memory Limit%')
 ) x
-
 --where dbname = N'ram_tax'
-
 ORDER BY CpuRank + PhysicalReadsRank + DurationRank asc
+
 
 --select * from dbo.worstqueries
 
