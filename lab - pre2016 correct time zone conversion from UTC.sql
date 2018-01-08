@@ -49,6 +49,7 @@ DROP TABLE dbo.DSTDates
  )
  GO
  CREATE CLUSTERED INDEX IDX_CL_DSTDates on dbo.DSTDates (BeginDate, EndDate)
+ CREATE NONCLUSTERED INDEX IDX_NC_DSTDates on dbo.DSTDates (BeginDate, EndDate) 
  GO
   INSERT INTO dbo.DSTDates (BeginDate, EndDate)
 VALUES 
