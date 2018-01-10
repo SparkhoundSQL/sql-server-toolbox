@@ -11,8 +11,6 @@
 --Shrink/regrow step only works for databases with one log file. Why do you have more than one log file anyway? Stop. Think. Ask yourself.
 
 
-select * from sys.databases where
-
 BEGIN TRY
 IF EXISTS (select * from tempdb.sys.objects where name like '#Log%')
 DROP TABLE #Log
