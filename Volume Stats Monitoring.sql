@@ -185,7 +185,7 @@ EXEC  msdb.dbo.sp_add_job @job_name=N'Volume Stats_Daily Insert',
 		@owner_login_name=N'sa', @job_id = @jobId OUTPUT
 select @jobId
 GO
-EXEC msdb.dbo.sp_add_jobserver @job_name=N'Volume Stats_Daily Insert', @server_name = N'' --enter server name
+EXEC msdb.dbo.sp_add_jobserver @job_name=N'Volume Stats_Daily Insert', @server_name = N'(LOCAL)'
 GO
 USE [msdb]
 GO
