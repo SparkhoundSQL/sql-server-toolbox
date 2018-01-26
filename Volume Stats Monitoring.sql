@@ -122,7 +122,7 @@ DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercen
 
 END
 
-FETCH NEXT FROM VolumeInfo INTO @volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@Mytime
+FETCH NEXT FROM VolumeInfo INTO @volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@MyTime
 END
 CLOSE VolumeInfo
 DEALLOCATE VolumeInfo
