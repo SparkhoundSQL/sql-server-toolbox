@@ -3,7 +3,7 @@
 
 #Full toolbox
 cd E:\OneDrive\toolbox
-get-childitem .\* -Recurse | Where-Object {$_.FullName -notlike '*\.git*' }  | Where-Object {$_.FullName -notlike "*toolbox.zip" } | Compress-Archive -DestinationPath .\toolbox.zip -Force 
+get-childitem .\* -Recurse | Where-Object {$_.FullName -notlike '*\.git*' }  | Where-Object {$_.FullName -notlike "*.zip" } | Compress-Archive -DestinationPath .\toolbox.zip -Force 
 
 #Stable state checklist files only
 $stablestate  = (
