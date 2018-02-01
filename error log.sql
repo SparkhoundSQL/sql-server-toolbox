@@ -35,3 +35,17 @@ where  1=1
 --and LogMessageText not like '%without errors%'
 --and LogMessageText not like '%informational%'
 order by LogDate desc
+
+
+--order of servers in a multiserver query is not determinant
+select LogMessageText, LogProcessInfo, count(logDate), max(logDate) from @readerrorlog 
+where  1=1
+--and (	
+--	LogMessageText like '%error%'
+--or	LogMessageText like '%failure%'
+--or	LogMessageText like '%failed%'
+--)
+--and LogMessageText not like '%without errors%'
+--and LogMessageText not like '%informational%'
+group by LogMessageText, LogProcessInfo
+order by count(logDate) desc, max(logDate) desc
