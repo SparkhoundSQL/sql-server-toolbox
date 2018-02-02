@@ -6,7 +6,7 @@ select
 FROM
 (
 select 
-	database_Name
+	database_name
 	, backuptype 
 	, d.recovery_model_desc
 	, BackupDate = MAX(BackupDate)
@@ -25,7 +25,7 @@ select distinct
 							WHEN 'Q' then 'Differential partial' END
 	, BackupDate	=	MAX(backup_start_date)  	
 	from msdb.dbo.backupset bs							
- group by Database_name, type
+ group by database_name, type
  UNION 
  select distinct
 	db_name(d.database_id)
@@ -51,7 +51,7 @@ order by backuptype, recovery_model_desc
 GO
 
 select 
-	database_Name
+	database_name
 	, backuptype 
 	, d.recovery_model_desc
 	, BackupDate = MAX(BackupDate)
@@ -70,7 +70,7 @@ select distinct
 							WHEN 'Q' then 'Differential partial' END
 	, BackupDate	=	MAX(backup_start_date)  	
 	from msdb.dbo.backupset bs							
- group by Database_name, type
+ group by database_name, type
  UNION 
  select distinct
 	db_name(d.database_id)
