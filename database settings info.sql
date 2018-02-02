@@ -7,8 +7,8 @@ select
 	name
 ,	[compatibility_level]	--should be latest (130 = SQL2016, 120 = SQL2014, 110 = SQL2012, 100 = SQL2008, 90 = SQL2005)
 ,	[dbstate] = case when state_desc = 'online' and is_read_only = 1 then state_desc + ' ' +'(Read-Only)' else state_desc end 		
-,	recovery_model_Desc
-,	page_verify_option_Desc
+,	recovery_model_desc
+,	page_verify_option_desc
 ,	user_access_desc		--should be MULTI_USER
 ,	is_auto_close_on		--should be 0
 ,	is_auto_shrink_on		--should be 0
@@ -30,7 +30,7 @@ order by [compatibility_level]
 --Databases where page verify option is not CHECKSUM
 select
  	[Database Name]			= name
-,	[Page Verify Option]	= page_verify_option_Desc
+,	[Page Verify Option]	= page_verify_option_desc
 ,	[State]					= dbstate		
 from #DBSettings
 where page_verify_option_desc <> 'CHECKSUM'
