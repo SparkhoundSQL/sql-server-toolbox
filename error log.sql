@@ -38,7 +38,7 @@ order by LogDate desc
 
 
 --order of servers in a multiserver query is not determinant
-select LogMessageText, LogProcessInfo, count(logDate), max(logDate) from @readerrorlog 
+select LogMessageText, LogProcessInfo, count(LogDate), max(LogDate) from @readerrorlog 
 where  1=1
 --and (	
 --	LogMessageText like '%error%'
@@ -48,4 +48,4 @@ where  1=1
 --and LogMessageText not like '%without errors%'
 --and LogMessageText not like '%informational%'
 group by LogMessageText, LogProcessInfo
-order by count(logDate) desc, max(logDate) desc
+order by count(LogDate) desc, max(LogDate) desc
