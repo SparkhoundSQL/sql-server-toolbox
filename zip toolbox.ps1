@@ -8,7 +8,7 @@ get-childitem .\* -Recurse | Where-Object {$_.FullName -notlike '*\.git*' }  | W
 #Stable state checklist files only
 $stablestate  = (
     '*Add Agent Failure Notifications job*',
-    '*Autogrowth*',
+    '*autogrow*',
     'Backup History*', 
     '*Configuration Changes History*', 
     '*Database Owner*', 
