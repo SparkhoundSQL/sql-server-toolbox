@@ -10,6 +10,7 @@ $stablestate  = (
     '*Add Agent Failure Notifications job*',
     '*autogrow*',
     'Backup History*', 
+    'job - *',
     '*Configuration Changes History*', 
     '*Database Owner*', 
     '*Database Settings*', 
@@ -20,12 +21,14 @@ $stablestate  = (
     '*Index Usage*', 
     '*Job Owners*', 
     '*Missing Indexes*', 
+    '*multiserver*',
     '*Public Permissions*', 
     '*Sharepoint databases*', 
     'Space in files*', 
     '*Space in Log Files*', 
     '*Stats out of Date*', 
     '*TempDB*', 
-    '*VLFs*');
+    '*VLFs*',
+    'volume stats*');
 
 get-childitem .\* -Recurse -include $stablestate | Compress-Archive -DestinationPath .\toolbox-stablestate.zip -Force 
