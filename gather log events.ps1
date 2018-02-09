@@ -1,6 +1,6 @@
 #Must launch PowerShell as an Administrator to read from the Security log
 
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted -Force
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted -Force
 
 <#
 $NumDays = -30
