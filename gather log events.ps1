@@ -1,5 +1,8 @@
 #Must launch PowerShell as an Administrator to read from the Security log
 
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted -Force
+
+<#
 $NumDays = -30
 $EventLog_Application = Get-EventLog -LogName "Application" -After (Get-Date).AddDays($NumDays) | 
     ? { $_.entryType -Match "Error" -and "Critical" -and "Warning" } | Group-Object -Property EventID |
@@ -17,9 +20,8 @@ $EventLog_Security = Get-EventLog -LogName "Security" -After (Get-Date).AddDays(
     Sort-Object Count -Descending -Unique | 
     Select-Object LogSource, Count, @{name="Latest";expression={$_.TimeGenerated}}, EventID, Source, Message ;
 @( $EventLog_System; $EventLog_Application; $EventLog_Security) | Out-GridView;
+#>
 
-
-<#
 ## Version that works on PowerShell 2.0 because of Add-Member and Out-Gridview dependencies aren't supported until 3.0
 
 clear-host
@@ -69,4 +71,4 @@ Get-EventLog -LogName "Security" -After (Get-Date).AddDays($numDays) |
     }
 $eventLog_Application  | Sort-Object -Property Count, Latest -Descending  | Export-Csv -Path "C:\temp\export.csv" -Encoding ascii -NoTypeInformation
 
-#>
+
