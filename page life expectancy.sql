@@ -10,8 +10,11 @@ select
 ,	'Churn (MB/s)'			=	cast((p.Total_Server_Mem_GB)/1024./NULLIF(p.PLE_s,0) as decimal(19,2))
 ,	Server_Available_physical_mem_GB = (SELECT cast(available_physical_memory_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_sys_memory) 
 ,	SQL_Physical_memory_in_use_GB = (SELECT cast(physical_memory_in_use_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_process_memory)
-,	p.Total_Server_Mem_GB --May be more or less than memory_in_use because it 
+,	p.Total_Server_Mem_GB --May be more or less than memory_in_use 
 ,	p.Target_Server_Mem_GB	
+,	Target_vs_Total = CASE WHEN p.Total_Server_Mem_GB < p.Target_Server_Mem_GB	 
+							THEN 'Target >= Total. SQL wants more memory than it has currently.'
+							ELSE 'Total >= Target. SQL has enough memory to do what it wants.' END
 ,	si.LPIM -- Works on SQL 2016 SP1 and above only
 from(
 select 
