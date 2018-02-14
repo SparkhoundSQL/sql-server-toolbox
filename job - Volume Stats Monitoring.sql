@@ -157,7 +157,7 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 	--if @percent < @Threshold -- removed WDA 20170418
 	--BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
-		   @recipients = 'managed.sql@sparkhound.com',  
+		   @recipients = 'sql.alerts@sparkhound.com',  
 		   @body = @tableHTML, 
 		   @importance = 'HIGH', 
 		   @body_format ='HTML',
