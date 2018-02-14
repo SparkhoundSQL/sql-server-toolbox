@@ -1,7 +1,7 @@
 --On a secondary replica, this view returns a row for every secondary database on the server instance. 
 --On the primary replica, this view returns a row for each primary database and an additional row for the corresponding secondary database.
 
---Updated WDA 20170622
+--Updated WDA 20180209
 
 
 --Monitor Availability Group performance
@@ -108,6 +108,11 @@ select
 ,	Replica_Role		= CASE WHEN last_received_time IS NULL THEN 'PRIMARY (Connections: '+ar.primary_role_allow_connections_desc+')' ELSE 'SECONDARY (Connections: '+ar.secondary_role_allow_connections_desc+')' END
 ,	Last_received_time
 ,	Last_commit_time
+,	dm.synchronization_state_desc 
+,	dm.synchronization_health_desc
+,	ar.availability_mode_desc
+,	ar.failover_mode_desc
+,	Suspended = case is_suspended when 1 then suspend_reason_desc else 'NO' end
 ,	Redo_queue_size_MB		= convert(decimal(19,2),dm.redo_queue_size/1024.)--KB
 ,	Redo_rate_MB_per_s		= convert(decimal(19,2),dm.redo_rate/1024.) --KB/s
 ,	Redo_Time_Left_s_RTO	= convert(decimal(19,2),dm.redo_queue_size*1./NULLIF(dm.redo_rate*1.,0)) --only part of RTO. NULL value on secondary replica indicates no sampled activity.
@@ -118,11 +123,6 @@ select
 ,	Avg_Sampled_Transaction_Delay_ms_per_s	= convert(decimal(19,2), (td.TransactionDelay_end - td.TransactionDelay_Start) / ((td.TransactionDelay_end_ms - td.TransactionDelay_Start_ms)/1000.))
 ,	Transactions_per_s	= convert(decimal(19,2), ((td.MirroredWriteTranspersec_end - td.MirroredWriteTranspersec_start) / ((td.MirroredWriteTranspersec_End_ms - td.MirroredWriteTranspersec_Start_ms)/1000.)))
 ,	dm.secondary_lag_seconds --sql 2016 and above only
-,	dm.synchronization_state_desc 
-,	dm.synchronization_health_desc
-,	ar.availability_mode_desc
-,	ar.failover_mode_desc
-,	Suspended = case is_suspended when 1 then suspend_reason_desc else 'NO' end
 ,	ar.backup_priority
 ,	ar.modify_date
 ,	ar.endpoint_url 
