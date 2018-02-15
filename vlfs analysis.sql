@@ -4,8 +4,7 @@
 
 --shows the number of VLF's. CreateLSN=0 for the original created files.
 --filesize /1024, *8 to get MB 
---Ideally <50 VLF's per tlog. 
---Ideally VLF sizes between 64MB and 1024MB
+--Ideally 1 VLF per 500MB. 
 --IF log >8 GB, Recreate log in 8000 MB increments.
 
 --Shrink/regrow step only works for databases with one log file. Why do you have more than one log file anyway? Stop. Think. Ask yourself.
@@ -39,7 +38,7 @@ select @Log_MB =sum(convert(bigint, mf.size))*8/1024 FROM sys.master_files mf wh
 select @VLFCo=Count_big(StartOffset) ,	@Avg_MB=@Log_MB / Count_big(StartOffset)
 from #Log
 
-if (@VLFCo  > 50) AND (@Log_MB <= (8000)) AND EXISTS (select 1 FROM sys.databases as d where is_read_only = 0 and state=0 and db_id()=d.database_id)  BEGIN
+if ((@Avg_MB <= 128 OR @Avg_MB > 4000))  AND EXISTS (select 1 FROM sys.databases as d where is_read_only = 0 and state=0 and db_id()=d.database_id)  BEGIN
 		select DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
 SELECT @T= ''
 USE [''+d.name+'']
@@ -75,7 +74,7 @@ DECLARE @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) ,
 SELECT @Log_MB=sum(convert(bigint, mf.size))*8./1024. FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
 SELECT @VLFCo=Count_big(StartOffset) , @Avg_MB=@Log_MB / Count_big(StartOffset) from #Log
 
-IF ((@VLFCo>50) OR (@Avg_MB>1024) OR (@Avg_MB<64)) AND (@Log_MB>8000) AND EXISTS (select 1 FROM sys.databases as d where is_read_only = 0 and state=0 and db_id()=d.database_id)  BEGIN
+IF ( (@Avg_MB>1024) OR (@Avg_MB<64)) AND (@Log_MB>8000) AND EXISTS (select 1 FROM sys.databases as d where is_read_only = 0 and state=0 and db_id()=d.database_id)  BEGIN
 SELECT DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
 SELECT @LCnt=1, @Accu=0
 SELECT top 1 @T=''
