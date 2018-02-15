@@ -1,6 +1,6 @@
 
 --DBCC LogInfo
---If no TSQL scripts generated in the Messages tab, then no log files of a significant size were found with >50 VLF's or small avg VLF sizes.
+--If no TSQL scripts generated in the Messages tab, then no log files found with need for VLF maint.
 
 --shows the number of VLF's. CreateLSN=0 for the original created files.
 --filesize /1024, *8 to get MB 
