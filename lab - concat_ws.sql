@@ -9,7 +9,7 @@ SELECT csv = CONCAT_WS('","', '"'+name, current_utc_offset, is_currently_dst)+'"
 FROM sys.time_zone_info
 
 --Aggregate concatenation 
-SELECT STRING_AGG(name, ',') FROM sys.time_zone_info
+SELECT STRING_AGG(name, ', ') FROM sys.time_zone_info WHERE NAME LIKE '%central%';
 
 SELECT STRING_AGG(
 		cast(
