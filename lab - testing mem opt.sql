@@ -371,8 +371,9 @@ group by db_name(mf.database_id), mf.name, mf.physical_name, cf.file_type_desc
 
 
 select  
-	Table_name = object_name(xhis.object_id) 
-,	xhis.index_id
+	Table_name = object_name(xis.object_id) 
+,	xis.index_id
+,	xis.xtp_object_id
 ,	xmc.memory_consumer_desc
 ,	xhis.total_bucket_count
 ,	xhis.empty_bucket_count
