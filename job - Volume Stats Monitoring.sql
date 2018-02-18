@@ -17,7 +17,7 @@ CREATE TABLE [dbo].[VolumeStats](
 	[DriveSize] DECIMAL(19,2) NULL,
 	[DriveFreeSpace] DECIMAL(19,2) NULL,
 	[DrivePercentFree] DECIMAL(19,2) NULL,
-	[DateTimePerformed] datetime2(7) NULL,
+	[DateTimePerformed] datetimeoffset(2) NULL,
  CONSTRAINT [PK_VolumeStats] PRIMARY KEY CLUSTERED 
 (
 	[ID] ASC
@@ -52,7 +52,7 @@ CREATE TABLE [dbo].[VolumeStats](
 	[Total_Size] [DECIMAL(19,2)] NULL,
 	[Available_Size] [DECIMAL(19,2)] NULL,
 	[Space_Free] [DECIMAL(19,2)] NULL,
-	[DateTimeStamp] [datetime2](7) NULL,
+	[DateTimeStamp] datetimeoffset(2) NULL,
  CONSTRAINT [PK_VolumeStats] PRIMARY KEY CLUSTERED 
 (	[ID] ASC)
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
@@ -75,11 +75,11 @@ logical_volume_name nvarchar(512),
 Total_Size DECIMAL(19,2),
 Available_Size DECIMAL(19,2),
 Space_Free DECIMAL(19,2),
-DateTimePerformed datetime2
+DateTimePerformed datetimeoffset(2)
 )
 
 
-DECLARE @TimeStamp datetime2 = getdate()
+DECLARE @TimeStamp datetimeoffset(2) = sysdatetimeoffset()
 DECLARE VolumeInfo cursor
 FOR 
 SELECT	  MAX(vs.volume_mount_point)
@@ -95,7 +95,7 @@ GROUP BY vs.volume_mount_point --group by was added 20171107 CLL
 
 DECLARE @volume nvarchar(512),@file_system_type nvarchar(512),@logical_name nvarchar(512)
 DECLARE @TotalSize DECIMAL(19,2),@AvailableSize DECIMAL(19,2), @percent DECIMAL(19,2)
-DECLARE @MyTime datetime2
+DECLARE @MyTime datetimeoffset(2)
 
 OPEN VolumeInfo
 
