@@ -30,7 +30,7 @@ INNER JOIN sys.objects as o ON o.object_id = s.object_id
 INNER JOIN sys.schemas as sc ON o.schema_id = sc.schema_id
 WHERE i.is_disabled = 0
 --AND s.page_count > 12800 --12800 pages is 100mb
-AND	alloc_unit_Type_desc <> 'LOB_DATA'
+AND	alloc_unit_type_desc <> 'LOB_DATA'
 
 ) x
 WHERE avg_fragmentation_pct > 70
