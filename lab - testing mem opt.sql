@@ -386,16 +386,8 @@ from sys.dm_db_xtp_index_stats as xis
 inner join sys.dm_db_xtp_memory_consumers as xmc on xmc.object_id = xis.object_id and xmc.xtp_object_id = xis.xtp_object_id
 left outer join sys.dm_db_xtp_hash_index_stats as xhis on xhis.xtp_object_id = xis.xtp_object_id and xhis.object_id = xis.object_id
 left outer join sys.dm_db_xtp_nonclustered_index_stats as xnis on xis.xtp_object_id = xnis.xtp_object_id and xis.object_id = xnis.object_id
-
+WHERE object_name(xis.object_id)  is not null
 GO
-
-SELECT state_desc  
- , file_type_desc  
- , COUNT(*) AS [count]  
- , SUM(file_size_in_bytes) / 1024 / 1024 AS [on-disk size MB]   
-FROM sys.dm_db_xtp_checkpoint_files  
-GROUP BY state, state_desc, file_type, file_type_desc  
-ORDER BY state, file_type  
 
 
 --How much memory (estimated)?
