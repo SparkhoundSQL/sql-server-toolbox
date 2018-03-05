@@ -134,7 +134,7 @@ SELECT
 	FROM msdb.dbo.backupset bs	
 	LEFT OUTER JOIN msdb.dbo.[backupmediafamily] bf
 	on bs.[media_set_id] = bf.[media_set_id]
-	where database_name = 'SP2010_UserProfile_Sync'
+	where database_name = 'DBName'
 	ORDER BY bs.database_name asc, BackupDate desc;
   
   select convert(Date, backup_finish_date), SizeGB = sum(compressed_backup_size)/1024./1024./1024.
