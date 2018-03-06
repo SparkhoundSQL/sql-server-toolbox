@@ -31,7 +31,7 @@ inner join sys.database_principals r on rm.role_principal_id = r.principal_id
 inner join sys.database_principals d on rm.member_principal_id = d.principal_id
 where d.name = ''public''
 ';
-EXEC sp_msforeachdb @TSQL
+EXEC sp_MSforeachdb @TSQL
 GO
 
 --Multi-database database permissions
