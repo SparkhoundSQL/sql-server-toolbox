@@ -18,7 +18,7 @@ FOR
 select convert(nvarchar(4000),	'
 EXEC msdb.dbo.sp_update_job @job_id=N'''+convert(varchar(64), job_id)+''', /*'+j.name+'*/ 
 		@notify_level_email=2, 
-		@notify_email_operator_name=N''dbadministrators@sparkhound.com''')
+		@notify_email_operator_name=N''SH''')
 from msdb.dbo.sysjobs  j
 where j.notify_email_operator_id = 0  
 and j.name not in ('syspolicy_purge_history')
@@ -84,7 +84,7 @@ EXEC msdb.dbo.sp_update_job @job_id=N''''''+convert(varchar(64), job_id)+'''''',
 		@notify_level_email=2, 
 		@notify_level_netsend=2, 
 		@notify_level_page=2, 
-		@notify_email_operator_name=N''''dbadministrators@sparkhound.com'''''')
+		@notify_email_operator_name=N''''SH'''''')
 from msdb.dbo.sysjobs 
 where notify_email_operator_id = 0
 declare @tsql nvarchar(4000) = null
