@@ -112,10 +112,21 @@ EXEC msdb.dbo.sp_add_alert @name=N'Availability Groups Error - 41405 - not ready
   @job_id=N'00000000-0000-0000-0000-000000000000'
 
   GO 
+  
+      
+--AlwaysOn Availability Groups failover occurred
+EXEC msdb.dbo.sp_add_alert @name=N'Availability Groups Error - 91234  - AlwaysOn High Availablity Failover Occurred warning',
+  @message_id=91234, 
+  @severity=0, 
+  @enabled=1, 
+  @delay_between_responses=60, 
+  @include_event_description_in=1, 
+  @job_id=N'00000000-0000-0000-0000-000000000000'
+
+  GO 
 
 
-
-DECLARE @OperatorName nvarchar(100)='sql.alerts@sparkhound.com' --TODO: change
+DECLARE @OperatorName nvarchar(100)='DBAResponse' --TODO: change
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 35273 - bypassing recovery', @operator_name=@OperatorName, @notification_method = 1;
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 35276 - failed to allocate database', @operator_name=@OperatorName, @notification_method = 1;
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 35274 - recovery pending', @operator_name=@OperatorName, @notification_method = 1;
@@ -126,6 +137,7 @@ EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 3526
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 35265 - data movement resumed', @operator_name=@OperatorName, @notification_method = 1;
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 41404 - AG offline', @operator_name=@OperatorName, @notification_method = 1;
 EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 41405 - not ready for automatic failover', @operator_name=@OperatorName, @notification_method = 1;
-  GO 
+EXEC msdb.dbo.sp_add_notification @alert_name=N'Availability Groups Error - 91234 - AlwaysOn High Availablity Failover Occurred warning', @operator_name=@OperatorName, @notification_method = 1;
+GO 
 
  
