@@ -8,10 +8,22 @@ DECLARE @TempTable TABLE
 ,SpaceUsedMB decimal(19,2)
 ,AvailableMB decimal(19,2)
 ,FreePercent decimal(19,2)
+,growTSQL nvarchar(4000)
 )
+
+--Optional filter for small/unused databases at bottom
 
 INSERT INTO @TempTable
 exec sp_MSforeachdb  'use [?]; 
+select *,
+growTSQL = ''ALTER DATABASE [''+DatabaseName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS+''] 
+MODIFY FILE ( NAME = N''''''+DatabaseFileName_______ COLLATE SQL_Latin1_General_CP1_CI_AS +''''''
+, '' + CASE WHEN FileSizeMB < 100 THEN ''SIZE = ''+STR(FileSizeMB+64)
+			WHEN FileSizeMB < 1000 THEN ''SIZE = ''+STR(FileSizeMB+256)
+			WHEN FileSizeMB < 10000 THEN ''SIZE = ''+STR(FileSizeMB+1024)
+			WHEN FileSizeMB < 40000 THEN ''SIZE = ''+STR(FileSizeMB+4092)
+			ELSE ''SIZE = ''+STR(FileSizeMB+(FileSizeMB*.05)) END +''MB )''
+FROM (
 SELECT 
   ''DatabaseName_____________'' = d.name
 , Recovery = d.recovery_model_desc
@@ -25,8 +37,12 @@ SELECT
  FROM sys.database_files df
  cross apply sys.databases d
  where d.database_id = DB_ID() 
- and size > 0
+ and d.is_read_only = 0
+ and df.size > 0) x
+ --where [Free%] < 5  and FileSizeMB > 6 --Optional filter for small/unused databases 
 '
+
+
 
 SELECT
     *
