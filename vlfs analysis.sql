@@ -20,8 +20,8 @@ END CATCH
 SET NOCOUNT ON
 
 Create Table #Log(
-	RecoveryUnitId bigint not null--SQL 2012 and above only, comment out for <=SQL 2008
-  , FileID      int not null
+	--RecoveryUnitId bigint  null,--SQL 2012 and above only, comment out for <=SQL 2008
+    FileID      int not null
   , FileSize_KB    bigint not null
   , StartOffset bigint not null
   , FSeqNo      bigint not null
@@ -35,10 +35,10 @@ Insert Into #Log
 Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
 declare @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @T nvarchar(4000) 
 select @Log_MB =sum(convert(bigint, mf.size))*8/1024 FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
-select @VLFCo=Count_big(StartOffset) ,	@Avg_MB=@Log_MB / Count_big(StartOffset)
-from #Log
-
-if ((@Avg_MB <= 128 OR @Avg_MB > 4000) AND @Log_MB > 128)  AND EXISTS (select 1 FROM sys.databases as d where is_read_only = 0 and state=0 and db_id()=d.database_id)  BEGIN
+select @VLFCo=Count_big(StartOffset) ,	@Avg_MB=@Log_MB / Count_big(StartOffset) from #Log
+if ((@Avg_MB <= 64 OR @Avg_MB > 4000) AND @Log_MB > 1024) AND (@Log_MB<8000) AND (@VLFCo>100) AND EXISTS 
+(select 1 FROM sys.databases WHERE is_read_only = 0 and state=0 and db_id()=database_id)
+BEGIN
 		select DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
 SELECT @T= ''
 USE [''+d.name+'']
@@ -56,12 +56,12 @@ FROM sys.databases d inner join sys.master_files mf on d.database_id=mf.database
 IF @T IS NOT NULL BEGIN
 	set @T=@T+''
 ''
-	IF @VLFCo  > 50 
-	SELECT DB_NAME()+'' log file excessive VLFs.''
+	IF @VLFCo  > (@Log_MB / 100)
+	SELECT DB_NAME()+'' log file too many VLFs.''
 	IF @Avg_MB > 1024 
-	SELECT DB_NAME()+'' log file VLFs are too large.''
-	IF @Avg_MB < 64
-	SELECT DB_NAME()+'' log file VLFs are too small.''
+	SELECT DB_NAME()+'' log file VLFs too large.''
+	IF (@Avg_MB < 64 AND @Log_MB > 1024)
+	SELECT DB_NAME()+'' log file VLFs too small.''
 	print  @T
 END	
 END
@@ -74,7 +74,8 @@ DECLARE @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) ,
 SELECT @Log_MB=sum(convert(bigint, mf.size))*8./1024. FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
 SELECT @VLFCo=Count_big(StartOffset) , @Avg_MB=@Log_MB / Count_big(StartOffset) from #Log
 
-IF ( (@Avg_MB>1024) OR (@Avg_MB<64)) AND (@Log_MB>8000) AND EXISTS (select 1 FROM sys.databases as d where is_read_only = 0 and state=0 and db_id()=d.database_id)  BEGIN
+IF ( (@Avg_MB>1024) OR (@Avg_MB<64 AND @Log_MB > 1024)) AND (@Log_MB>8000) AND (@VLFCo>100) AND EXISTS (select 1 FROM sys.databases WHERE is_read_only = 0 and state=0 and db_id()=database_id)
+BEGIN
 SELECT DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
 SELECT @LCnt=1, @Accu=0
 SELECT top 1 @T=''
@@ -110,14 +111,19 @@ END
 IF @T IS NOT NULL BEGIN
 set @T=@T+''
 ''
-IF @VLFCo  > 50 SELECT DB_NAME()+'' excessive VLF count.'';
-IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs are too large on avg.''; --Not sure if actually possible 
-IF @Avg_MB < 64 SELECT DB_NAME()+'' VLFs are too small on avg.'';
+IF @VLFCo  > (@Log_MB / 100) SELECT DB_NAME()+'' excessive VLF count.'';
+IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs too large''; --Not sure if actually possible 
+IF @Avg_MB < 64 SELECT DB_NAME()+'' VLFs too small'';
 print @T;
 END
 Truncate Table #Log;'
 
 Drop Table #Log;
+
+--CitizensBilling_QA	291	1744.00	5.99
+--RAPID_be_Phase2_UAT	96	1151.00	11.99
+
+--RAPID_be_Phase2_UAT	20	1151.00	57.55
 
 /*
 More reference
