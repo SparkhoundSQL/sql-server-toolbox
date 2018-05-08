@@ -3,7 +3,7 @@
 --Execute in Grid mode
 
 declare @oldestdate as date, @now as datetime2(0)
-select @oldestdate = dateadd(year,-7, sysdatetime()), @now = sysdatetime() --must create a variable to be passed later on
+select @oldestdate = dateadd(month,-1, sysdatetime()), @now = sysdatetime() --must create a variable to be passed later on
 
 select 'Getting errors since ' + cast(@oldestdate as varchar(30))
 
