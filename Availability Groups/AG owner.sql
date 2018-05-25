@@ -1,4 +1,5 @@
 --should not be owned by named account!
+--Run this on EACH replica SQL instance, it may be different.
 
 SELECT ar.replica_server_name
 	,ag.name AS ag_name
