@@ -1,5 +1,5 @@
 select suser_sname(); --you
-execute as login = 'sparkhound\test.user' --login name you want to test
+execute as login = 'domain\test.user' --login name you want to test
 
 use master
 select suser_sname(), * from sys.fn_my_permissions (null, 'DATABASE') --https://msdn.microsoft.com/en-us/library/ms176097.aspx
