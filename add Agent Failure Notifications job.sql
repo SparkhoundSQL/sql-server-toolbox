@@ -1,4 +1,4 @@
---TODO: Change the operator name dbadministrators@sparkhound.com
+--TODO: Change the operator name sql.alerts@sparkhound.com
 --TODO: Uncomment --EXEC (@TSQL) when confirmed
 
 USE [msdb]
@@ -18,7 +18,7 @@ FOR
 select convert(nvarchar(4000),	'
 EXEC msdb.dbo.sp_update_job @job_id=N'''+convert(varchar(64), job_id)+''', /*'+j.name+'*/ 
 		@notify_level_email=2, 
-		@notify_email_operator_name=N''SH''')
+		@notify_email_operator_name=N''sql.alerts@sparkhound.com''')
 from msdb.dbo.sysjobs  j
 where j.notify_email_operator_id = 0  
 and j.name not in ('syspolicy_purge_history')
@@ -30,7 +30,7 @@ INTO @TSQL
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-	EXEC (@TSQL)
+	--EXEC (@TSQL)
 	SELECT @TSQL
 	FETCH NEXT FROM AddFailureNotifications 
 	INTO @TSQL
@@ -40,7 +40,8 @@ CLOSE AddFailureNotifications
 DEALLOCATE AddFailureNotifications;
 
 /*
---Change the operator name dbadministrators@sparkhound.com
+
+--Change the operator name sql.alerts@sparkhound.com
 --you may need to change the @server_name value below
 USE [msdb]
 GO
@@ -63,7 +64,7 @@ EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Add Failure Notifications',
 		@description=N'Adds failure notification emails to any jobs that are created', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'dbadministrators@sparkhound.com', @job_id = @jobId OUTPUT
+		@notify_email_operator_name=N'sql.alerts@sparkhound.com', @job_id = @jobId OUTPUT
 IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
 EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'tsql', 
 		@step_id=1, 
@@ -84,7 +85,7 @@ EXEC msdb.dbo.sp_update_job @job_id=N''''''+convert(varchar(64), job_id)+'''''',
 		@notify_level_email=2, 
 		@notify_level_netsend=2, 
 		@notify_level_page=2, 
-		@notify_email_operator_name=N''''SH'''''')
+		@notify_email_operator_name=N''''sql.alerts@sparkhound.com'''''')
 from msdb.dbo.sysjobs 
 where notify_email_operator_id = 0
 declare @tsql nvarchar(4000) = null
