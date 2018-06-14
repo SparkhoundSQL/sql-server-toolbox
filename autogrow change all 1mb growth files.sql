@@ -3,7 +3,7 @@ USE [master]
 GO
 select 
 Alter_Autogrowth_Rates = case when mf.type_desc = 'ROWS' 
-	then 'ALTER DATABASE ['+d.name+'] MODIFY FILE ( NAME = N'''+ mf.name+ ''', FILEGROWTH = 512MB );
+	then 'ALTER DATABASE ['+d.name+'] MODIFY FILE ( NAME = N'''+ mf.name+ ''', FILEGROWTH = 256MB );
 GO' 
 	else 'ALTER DATABASE ['+d.name+'] MODIFY FILE ( NAME = N'''+ mf.name+ ''', FILEGROWTH = 256MB );
 GO' 

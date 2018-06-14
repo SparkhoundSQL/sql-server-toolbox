@@ -13,7 +13,7 @@ select
 ,	p.Total_Server_Mem_GB --May be more or less than memory_in_use 
 ,	p.Target_Server_Mem_GB	
 ,	Target_vs_Total = CASE WHEN p.Total_Server_Mem_GB < p.Target_Server_Mem_GB	 
-							THEN 'Target >= Total. SQL wants more memory than it has currently.'
+							THEN 'Target >= Total. SQL wants more memory than it has, or is building up to that point.'
 							ELSE 'Total >= Target. SQL has enough memory to do what it wants.' END
 ,	si.LPIM -- Works on SQL 2016 SP1 and above only
 from(
