@@ -1,6 +1,8 @@
 use master
 go
 --sql2005 and above
+
+--Look for gaps, omissions in the backups. A granular database backup history is below.
 select 
 	  a.database_name
 	, a.backuptype 
@@ -64,14 +66,7 @@ order by a.backuptype, d.recovery_model_desc, max(a.BackupFinishDate) asc, a.dat
 
  /*
 
- 
- select d.name, Latest_Restore = max(restore_date)
-	from sys.databases d
-	LEFT OUTER JOIN msdb.dbo.restorehistory rh on d.name = rh.destination_database_name
-	group by d.name
-	order by Latest_Restore desc
-
- --sql 2000 and above
+  --sql 2000 and above
 select distinct 
 	database_name	= d.name 
 	, a.backuptype	
@@ -112,6 +107,17 @@ order by backuptype, RecoveryModel, BackupDate asc
  */
 
  /*
+  --Latest Restore
+ select d.name, Latest_Restore = max(restore_date)
+	from sys.databases d
+	LEFT OUTER JOIN msdb.dbo.restorehistory rh on d.name = rh.destination_database_name
+	group by d.name
+	order by Latest_Restore desc
+
+
+*/
+
+
 --granular backup history
 SELECT 
 	database_name
@@ -134,17 +140,8 @@ SELECT
 	FROM msdb.dbo.backupset bs	
 	LEFT OUTER JOIN msdb.dbo.[backupmediafamily] bf
 	on bs.[media_set_id] = bf.[media_set_id]
-	where database_name = 'DBName'
+--	where database_name = 'DBName'
 	ORDER BY bs.database_name asc, BackupDate desc;
-  
-  select convert(Date, backup_finish_date), SizeGB = sum(compressed_backup_size)/1024./1024./1024.
-  from msdb.dbo.backupset bs	
-	left outer join msdb.dbo.[backupmediafamily] bf
-	on bs.[media_set_id] = bf.[media_set_id]
-	where 1=1 
-	and datepart(dw, backup_finish_date) = 1
-  group by convert(Date, backup_finish_date)
-  order by convert(Date, backup_finish_date) desc
-  
+ 
 
-*/
+ 
