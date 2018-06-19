@@ -43,7 +43,7 @@ FROM  DISK = N'''+@new_server_path_backup+ db_name(d.database_id) +'_migration_2
 WITH  FILE = 1
 ,  MOVE N'''+d.name+''' TO N'''+d.new_physical_name+'''
 ,  MOVE N'''+l.name+''' TO N'''+l.new_physical_name+'''
-,  NOUNLOAD,  STATS = 5
+,  NOUNLOAD,  STATS = 5, NORECOVERY
 GO
 ',
 ReadOnly_Off = '
@@ -57,5 +57,6 @@ where d.database_id > 4
 
 
 /*
- 
+
+
 */
