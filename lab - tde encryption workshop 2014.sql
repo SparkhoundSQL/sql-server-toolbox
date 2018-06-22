@@ -10,6 +10,13 @@ go
 */
 USE [master]
 GO
+
+--For Transparent Data Encryption (TDE) enabled databases with a single data file, 
+--the default MAXTRANSFERSIZE is 65536 (64 KB). For non-TDE encrypted databases the 
+--default MAXTRANSFERSIZE is 1048576 (1 MB) when using backup to DISK, and 65536 (64 KB) when using VDI or TAPE. 
+--https://docs.microsoft.com/en-us/sql/t-sql/statements/backup-transact-sql?view=sql-server-2017
+
+
 --Setup testing database.
 CREATE DATABASE [enctest]
 GO
