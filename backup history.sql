@@ -141,7 +141,7 @@ SELECT
 	LEFT OUTER JOIN msdb.dbo.[backupmediafamily] bf
 	on bs.[media_set_id] = bf.[media_set_id]
 --	where database_name = 'DBName'
-	ORDER BY bs.database_name asc, BackupDate desc;
+	ORDER BY  BackupDate desc, bs.database_name asc;
  
 
  
