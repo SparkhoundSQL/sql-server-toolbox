@@ -65,10 +65,9 @@ order by a.backuptype, d.recovery_model_desc, max(a.BackupFinishDate) asc, a.dat
  
 
  /*
-
-  --sql 2000 and above
+--for SQL 2000 and above
 select distinct 
-	database_name	= d.name 
+	  database_name	= d.name 
 	, a.backuptype	
 	, RecoveryModel	=	databasepropertyex(d.name, 'Recovery')  
 	, BackupDate	=	Max(a.backup_finish_date)  
@@ -99,13 +98,43 @@ select distinct
 			, null
 		  FROM master.dbo.sysdatabases d
 		  where databasepropertyex(d.name, 'Recovery') in ('FULL', 'BULK_LOGGED')
-  
- ) a
+  ) a
 	on d.name = a.database_name
  group by d.name , backuptype ,	databasepropertyex(d.name, 'Recovery')
 order by backuptype, RecoveryModel, BackupDate asc
  */
+ 
+--granular backup history
+SELECT 
+	database_name
+	, type
+	, backuptype = CASE 
+							WHEN bs.type = 'D' and bs.is_copy_only = 0 then 'Full Database'
+							WHEN bs.type = 'D' and bs.is_copy_only = 1 then 'Full Copy-Only Database'
+							WHEN bs.type = 'I' then 'Differential database'
+							WHEN bs.type = 'L' then 'Transaction Log'
+							WHEN bs.type = 'F' then 'File or filegroup'
+							WHEN bs.type = 'G' then 'Differential file'
+							WHEN bs.type = 'P' then 'Partial'
+							WHEN bs.type = 'Q' then 'Differential partial' END + ' Backup'
+	
+	, BackupDate	=	backup_finish_date
+	, database_backup_lsn -- For tlog and differential backups, this is the checkpoint_lsn of the FULL backup it is based on. 
+	, checkpoint_lsn
+	, bf.physical_device_name
+	, begins_log_chain
+	, backup_size_mb			=	bs.backup_size / 1024./1024.
+	, compressed_backup_size_mb =	bs.compressed_backup_size /1024./1024.
+	, bs.recovery_model
+	, *
+	FROM msdb.dbo.backupset bs	
+	LEFT OUTER JOIN msdb.dbo.[backupmediafamily] bf
+	on bs.[media_set_id] = bf.[media_set_id]
+	--where database_name = 'w'
+	ORDER BY  bs.database_name asc, BackupDate desc;
+ 
 
+ 
  /*
   --Latest Restore
  select d.name, Latest_Restore = max(restore_date)
@@ -114,34 +143,4 @@ order by backuptype, RecoveryModel, BackupDate asc
 	group by d.name
 	order by Latest_Restore desc
 
-
 */
-
-
---granular backup history
-SELECT 
-	database_name
-	, type
-	, backuptype = CASE bs.type WHEN 'D' then 'Database'
-							WHEN 'I' then 'Differential database'
-							WHEN 'L' then 'Transaction Log'
-							WHEN 'F' then 'File or filegroup'
-							WHEN 'G' then 'Differential file'
-							WHEN 'P' then 'Partial'
-							WHEN 'Q' then 'Differential partial' END
-	, BackupDate	=	backup_finish_date
-	, database_backup_lsn
-	, bf.physical_device_name
-	, begins_log_chain
-	, backup_size_mb			=	bs.backup_size / 1024./1024.
-	, compressed_backup_size_mb =	bs.compressed_backup_size /1024./1024.
-	, bs.is_copy_only	
-	, bs.recovery_model
-	FROM msdb.dbo.backupset bs	
-	LEFT OUTER JOIN msdb.dbo.[backupmediafamily] bf
-	on bs.[media_set_id] = bf.[media_set_id]
---	where database_name = 'DBName'
-	ORDER BY  BackupDate desc, bs.database_name asc;
- 
-
- 
