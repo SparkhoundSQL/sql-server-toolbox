@@ -48,7 +48,7 @@ SELECT
     *
 FROM @TempTable
 
-ORDER BY DatabaseName,FileId
+ORDER BY FreePercent,DatabaseName,FileId
 /*
 
 alter database [SP13PROD_SearchService_DB_AnalyticsReportingStore] set recovery simple
