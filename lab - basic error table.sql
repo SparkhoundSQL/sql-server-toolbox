@@ -1,18 +1,26 @@
 USE DBALogging
 GO
+
+DECLARE @errormessagecomplete  varchar(max) 
 begin try
-select 1/0
+
+--Use a database that is in SIMPLE recovery mode
+BACKUP LOG DBALogging 
+
 end try
 begin catch
-	INSERT INTO DBALogging.dbo.errortable ([ErrorNumber], [ErrorSeverity], [ErrorState], [ErrorProcedure], [ErrorLine], [ErrorMessage], [Process])
-	SELECT ERROR_NUMBER() AS ErrorNumber, ERROR_SEVERITY() AS ErrorSeverity, ERROR_STATE() as ErrorState, ERROR_PROCEDURE() as ErrorProcedure, ERROR_LINE() as ErrorLine, ERROR_MESSAGE() as ErrorMessage
-		, Process = 'Testing'; --need the semicolon
+	--Only captures the 3013, not the preceding and actual error message, 4208. :(
+	--INSERT INTO DBALogging.dbo.errortable ([ErrorNumber], [ErrorSeverity], [ErrorState], [ErrorProcedure], [ErrorLine], [ErrorMessage], [Process])
+	--SELECT ERROR_NUMBER() AS ErrorNumber, ERROR_SEVERITY() AS ErrorSeverity, ERROR_STATE() as ErrorState, ERROR_PROCEDURE() as ErrorProcedure, ERROR_LINE() as ErrorLine, ERROR_MESSAGE() as ErrorMessage
+	--	, Process = 'Testing'; --need the semicolon
+	
+	THROW --optional, to actually cause a failure. Reports both 4208 and 3013, job handles the capture.
 
-	THROW --optional, to actually cause a failure.
 end catch
 GO
-select * from DBALogging.dbo.errortable 
-GOa
+
+--select * from DBALogging.dbo.errortable 
+GO
 /*
 DROP TABLE [dbo].[errortable]
 GO
