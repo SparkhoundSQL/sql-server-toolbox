@@ -20,7 +20,7 @@ END CATCH
 SET NOCOUNT ON
 
 Create Table #Log(
-	--RecoveryUnitId bigint  null,--SQL 2012 and above only, comment out for <=SQL 2008
+	RecoveryUnitId bigint  null,--SQL 2012 and above only, comment out for <=SQL 2008
     FileID      int not null
   , FileSize_KB    bigint not null
   , StartOffset bigint not null
