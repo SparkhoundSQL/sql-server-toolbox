@@ -127,7 +127,7 @@ select
 ,	ar.modify_date
 ,	ar.endpoint_url 
 ,	ar.read_only_routing_url
-
+,	ar.session_timeout
 from sys.dm_hadr_database_replica_states dm
 INNER JOIN sys.availability_replicas ar on dm.replica_id = ar.replica_id and dm.group_id = ar.group_id
 INNER JOIN @TransactionDelay td on td.DB = db_name(dm.database_id)
@@ -137,11 +137,6 @@ ORDER BY
 ,	Instance		
 ,	DB			
 ,	Replica_Role
-
-
-
-
-
 
 --Current node only, should be run on primary
 select 
