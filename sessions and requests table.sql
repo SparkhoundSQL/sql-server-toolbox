@@ -5,13 +5,15 @@ DROP TABLE
 IF EXISTS 
 [dbo].[SessionsAndRequestsLog]
 go
+
 CREATE TABLE [dbo].[SessionsAndRequestsLog](
-	[timestamp] [datetime] NOT NULL INDEX IDX_NC_SessionsAndRequestsLog_timestamp CLUSTERED,
-	[session_id] [smallint] NOT NULL INDEX IDX_NC_SessionsAndRequestsLog_session_id NONCLUSTERED,
+	[timestamp] [datetime] NOT NULL,
+	[session_id] [smallint] NOT NULL,
 	[host_name] [nvarchar](256) NULL,
 	[program_name] [nvarchar](256) NULL,
 	[session_status] [nvarchar](60) NULL,
 	[request_status] [nvarchar](60) NULL,
+	[request_id] [int] NULL,
 	[blocking_these] [varchar](1000) NULL,
 	[blocked_by] [smallint] NULL,
 	[wait_type] [nvarchar](120) NULL,
@@ -50,10 +52,16 @@ CREATE TABLE [dbo].[SessionsAndRequestsLog](
 	[Governor_Group_ID] [int] NULL,
 	[Governor_Pool_Name] [sysname] NULL,
 	[Governor_Pool_ID] [int] NULL,
-	[total_rows] [bigint] NULL,
-	[last_rows] [bigint] NULL
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-
+	[EndPointName] [sysname] NULL,
+	[Protocol] [nvarchar](120) NULL,
+	[session_internal_alloc] [bigint] NULL,
+	[sesion_internal_dealloc] [bigint] NULL,
+	[session_user_alloc] [bigint] NULL,
+	[sesion_user_dealloc] [bigint] NULL,
+	[task_internal_alloc] [bigint] NULL,
+	[task_internal_dealloc] [bigint] NULL,
+	[task_user_alloc] [bigint] NULL,
+	[task_user_dealloc] [bigint] NULL
+) ON [PRIMARY] 
 GO
-
 
