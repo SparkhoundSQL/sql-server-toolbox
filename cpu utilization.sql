@@ -1,3 +1,5 @@
+--This is simple, for more CPU and Memory, look at toolbox/sys_dm_os_ring_buffers.sql
+
 --http://sqlblog.com/blogs/ben_nevarez/archive/2009/07/26/getting-cpu-utilization-data-from-sql-server.aspx
 
 declare @ts_now bigint
