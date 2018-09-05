@@ -37,7 +37,7 @@
 	,	[program_name] nvarchar(256) null
 	,	Governor_Group_Id int null
 	,	blocking_these varchar(1000) NULL
-	,	percent_complete int null
+	,	percent_complete int null --backup and restore events only
 	,	session_transaction_isolation_level varchar(20) null
 	,	request_transaction_isolation_level varchar(20) null
 	,	EndPointName sysname null
