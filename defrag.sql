@@ -1,14 +1,14 @@
-USE WideWorldImporters 
+USE w 
 go
---Using ALTER INDEX ALL isn't the most efficient. Instead, consider index-level or index-partition-level REBUILDs.
+--Using ALTER INDEX ALL isn't efficient. Instead, consider index-level or index-partition-level REBUILDs.
 --See also \toolbox\automated index rebuild w online 2016.sql
+--See also \toolbox\defrag columnstore.sql
 
 --Consider also DATA_COMPRESSION, SORT_IN_TEMPDB, ONLINE, MAXDOP options
 
 SELECT DISTINCT
-	SQL_Reorg = 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REORGANIZE;' 
-,	SQL_Status = 'UPDATE STATISTICS ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name]  + ';
-GO'
+	SQL_Reorg = 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REORGANIZE; 
+		UPDATE STATISTICS ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name]  + ';'
 ,	SQL_Rebuild = 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REBUILD;'  
 ,	avg_fragmentation_pct	=	avg(avg_fragmentation_pct)
 ,	page_count	=	sum(page_count)
@@ -40,7 +40,13 @@ order by page_count desc, avg_fragmentation_pct desc
 GO
 
 /*
-ALTER INDEX ALL ON WideWorldImporters.Sales.Invoices REBUILD
+--Consider also adding
 WITH (MAXDOP = 1, ONLINE = ON);
-ALTER INDEX ALL ON WideWorldImporters.Sales.Invoices REBUILD WITH (MAXDOP = 1, SORT_IN_TEMPDB = ON);
+
+
+ALTER INDEX ALL ON w.dbo.ActivateTable_guid REORGANIZE; 
+		UPDATE STATISTICS w.dbo.ActivateTable_guid;
+ALTER INDEX ALL ON w.dbo.fragmented_table REORGANIZE; 
+		UPDATE STATISTICS w.dbo.fragmented_table;
+
 */
