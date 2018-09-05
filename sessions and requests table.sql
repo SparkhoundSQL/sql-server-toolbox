@@ -33,8 +33,10 @@ CREATE TABLE [dbo].[SessionsAndRequestsLog](
 	[writes] [bigint] NULL,
 	[logical_reads] [bigint] NULL,
 	[offsettext] [nvarchar](max) NULL,
-	[statement_start_offset] [int] NULL,
-	[statement_end_offset] [int] NULL,
+	[Input_Buffer_Text_Event_Info] [nvarchar](max) NULL,
+	[Input_Buffer_Event_Type]	[nvarchar](1000) NULL,
+	--[statement_start_offset] [int] NULL,
+	--[statement_end_offset] [int] NULL,
 	[cacheobjtype] [nvarchar](35) NULL,
 	[QueryPlan] [xml] NULL,
 	[request_transaction_isolation_level] [varchar](15) NULL,
@@ -61,7 +63,9 @@ CREATE TABLE [dbo].[SessionsAndRequestsLog](
 	[task_internal_alloc] [bigint] NULL,
 	[task_internal_dealloc] [bigint] NULL,
 	[task_user_alloc] [bigint] NULL,
-	[task_user_dealloc] [bigint] NULL
+	[task_user_dealloc] [bigint] NULL,
+	total_rows [bigint] null,
+	last_rows [bigint] null
 ) ON [PRIMARY] 
 GO
 

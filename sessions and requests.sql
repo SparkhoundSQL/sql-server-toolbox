@@ -1,5 +1,6 @@
 --In Azure SQL, cannot run this in Master, must run in a user database.
 
+	print 'start ' + cast(sysdatetime() as varchar(20))
 	declare @showallspids bit, @showinternalgroup bit 
 	select	@showallspids = 1-- 1= show all sessions, 0= show only active requests
 		,	@showinternalgroup = 1 -- 1= show internal sessions, 0= ignore internal sessions based on RG group_id
@@ -102,7 +103,9 @@
 															ELSE r.statement_end_offset/2 - r.statement_start_offset/2 + 1
 														END	)
 							END
-		, r.statement_start_offset, r.statement_end_offset
+		, Input_Buffer_Text_Event_Info	= ib.event_info --SQL 2014 SP2+ only
+		, Input_Buffer_Event_Type		= ib.event_type --SQL 2014 SP2+ only
+		--, r.statement_start_offset, r.statement_end_offset
 		, cacheobjtype	=	LEFT (p.cacheobjtype + ' (' + p.objtype + ')', 35)
 		, QueryPlan		=	qp.query_plan	
 		, request_transaction_isolation_level	=	case request_transaction_isolation_level 
@@ -135,9 +138,8 @@
 		, tempdb.task_internal_dealloc
 		, tempdb.task_user_alloc 
 		, tempdb.task_user_dealloc
-		
-		--next two lines are SQL 2012 only!
-		--, stat.total_rows, stat.last_rows
+		, stat.total_rows --SQL 2012 only
+		, stat.last_rows --SQL 2012 only
 		from #ExecRequests r
 		LEFT OUTER JOIN sys.dm_exec_cached_plans p ON p.plan_handle = r.plan_handle 
 		OUTER APPLY sys.dm_exec_query_plan (r.plan_handle) qp
@@ -164,10 +166,11 @@
 							where SU.session_id > 50    
 							GROUP BY SU.session_id) as tempdb
 		on tempdb.session_id = r.session_id	
+		CROSS APPLY sys.dm_exec_input_buffer(r.session_id, r.request_id) AS ib   --SQL 2014 SP2+ only
 		
 	) a
 	order by len(blocking_these) - len(replace(blocking_these,',','')) desc, blocking_these desc, blocked_by desc, session_id
 
-	print 'done ' 
+	print 'done ' + cast(sysdatetime() as varchar(20))
 	go
 	drop table #ExecRequests  
