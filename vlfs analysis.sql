@@ -1,5 +1,6 @@
 
---DBCC LogInfo
+--TODO: Rewrite this for SQL 2016 SP2+ and SQL 2017 using sys.dm_db_log_stats instead of DBCC LOGINFO
+
 --If no TSQL scripts generated in the Messages tab, then no log files found with need for VLF maint.
 
 --shows the number of VLF's. CreateLSN=0 for the original created files.
@@ -8,7 +9,6 @@
 --IF log >8 GB, Recreate log in 8000 MB increments.
 
 --Shrink/regrow step only works for databases with one log file. Why do you have more than one log file anyway? Stop. Think. Ask yourself.
-
 
 BEGIN TRY
 IF EXISTS (select * from tempdb.sys.objects where name like '#Log%')
