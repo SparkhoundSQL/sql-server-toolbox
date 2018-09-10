@@ -2,7 +2,7 @@ use msdb
 go
 --TODO Change @owner_login_name to desired SQL agent service account to own the job
 
-declare @Desired_job_owner varchar(255) = 'sa' --'sa' is just an example, change to desired service account, example: domain\accountname
+declare @Desired_job_owner varchar(255) = 'SPARKHOUND\svcaccount' --'sa' is just an example, change to desired service account, example: domain\accountname
 
 --sql 2005 and above
 select owner = SUSER_SNAME (j.owner_sid), jobname = j.name, j.job_id
@@ -11,7 +11,9 @@ select owner = SUSER_SNAME (j.owner_sid), jobname = j.name, j.job_id
 from sysjobs j
 left outer join sys.server_principals  sp on j.owner_sid = sp.sid
 where 
-	(sp.name not in ('sa','distributor_admin')  and sp.name <> @Desired_job_owner)
+	(sp.name not in ('sa','distributor_admin','NT SERVICE\ReportServer') 
+	 and sp.name <> @Desired_job_owner
+	 and sp.name not like '##%')
 	or sp.name is null 
 
 /*
