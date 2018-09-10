@@ -1,5 +1,4 @@
---Most resource intensive database 
-
+--Most resource intensive databases
 
 Select DatabaseName = db_name(st.dbid) 
 , TotalIO			= sum(qs.total_logical_reads + qs.total_logical_writes) 
