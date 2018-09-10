@@ -29,6 +29,7 @@ $stablestate  = (
     '*Stats out of Date*', 
     '*TempDB*', 
     '*VLFs*',
-    'volume stats*');
+    'volume stats*',
+    'sessions and requests.sql'   );
 
 get-childitem .\* -Recurse -include $stablestate | Compress-Archive -DestinationPath .\toolbox-stablestate.zip -Force 
