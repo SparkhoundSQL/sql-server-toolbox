@@ -7,21 +7,24 @@ select top 15
 , Average_cpu		=	convert(decimal(19,2), tot_cpu_ms)/convert(decimal(19,2),usecounts)
 , Average_Duration	=	convert(decimal(19,2),tot_duration_ms)/convert(decimal(19,2),usecounts)
 , WorstQueriesObservedWhen		=	sysdatetime()
+, DeleteQueryPlan	= 'DBCC FREEPROCCACHE('+convert(varchar(64),PlanHandle,1)+')'  --delete just this plan
  from 
 (
 	SELECT 
 		  PlanStats.CpuRank, PlanStats.PhysicalReadsRank, PlanStats.DurationRank
-		, runtime		= sysdatetime()
+		, dbname = db_name( convert(int, pa.value) )
 		, cacheobjtype = LEFT (p.cacheobjtype + ' (' + p.objtype + ')', 35) 
 	    , p.usecounts, p.size_in_bytes / 1024 AS size_in_kb,
 		  PlanStats.total_worker_time/1000 AS tot_cpu_ms, PlanStats.total_elapsed_time/1000 AS tot_duration_ms, 
 		  PlanStats.total_physical_reads, PlanStats.total_logical_writes, PlanStats.total_logical_reads,
 		  PlanStats.last_execution_time
-		, dbname = db_name( convert(int, pa.value) )
 		, sql.objectid
 		, Procedure_name = CONVERT (nvarchar(75), CASE 
 											WHEN sql.objectid IS NULL THEN NULL 
-											ELSE REPLACE (REPLACE (sql.[text],CHAR(13), ' '), CHAR(10), ' ')
+											ELSE --Find the procedure name even in the comments block
+												REPLACE (REPLACE (
+												substring(sql.[text], charindex('CREATE',sql.[text],0),100)
+												, CHAR(13), ' '), CHAR(10), ' ')
 										  END)  
 		, stmt_text = 	REPLACE (REPLACE (SUBSTRING (sql.[text], PlanStats.statement_start_offset/2 + 1, 
 						  CASE WHEN PlanStats.statement_end_offset = -1 THEN LEN (CONVERT(nvarchar(max), sql.[text])) 
