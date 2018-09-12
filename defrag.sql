@@ -33,7 +33,7 @@ WHERE i.is_disabled = 0
 AND	alloc_unit_type_desc <> 'LOB_DATA'
 
 ) x
-WHERE avg_fragmentation_pct > 70
+--WHERE avg_fragmentation_pct > 70
 group by x.DB , x.[schema_name] , x.[table_name]
 order by page_count desc, avg_fragmentation_pct desc
 
