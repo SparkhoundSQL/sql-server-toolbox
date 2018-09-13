@@ -16,10 +16,12 @@ GO
 DECLARE @TestMode		bit
 DECLARE @StartWindow	tinyint
 DECLARE @EndWindow		tinyint
+DECLARE @CompressWhenPossible  bit 
 
 SELECT @TestMode	 =	1	-- flip to 1 to run out of cycle, without actually executing any code.
 SELECT @StartWindow	 =	0	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 SELECT @EndWindow	 =	23	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
+SELECT @CompressWhenPossible = 0
 
 SET XACT_ABORT ON;
 
@@ -105,8 +107,9 @@ BEGIN TRY
 								THEN 1
 							ELSE 0
 						END
-				,	Can_Compress	=	CASE	WHEN
-									   (left(@ProductVersion,2) >= 10 ) and (@ServerEdition like 'Developer%' or @ServerEdition like 'Enterprise%' )
+				,	Can_Compress	=	CASE
+										WHEN @CompressWhenPossible = 0 THEN 0	
+										WHEN (left(@ProductVersion,2) >= 10 ) and (@ServerEdition like 'Developer%' or @ServerEdition like 'Enterprise%' )
 											THEN 1
 											ELSE 0
 										END
@@ -238,7 +241,7 @@ BEGIN TRY
 											IF @Can_Compress = 1
 											SELECT @Command = @Command + ', DATA_COMPRESSION = PAGE'
 		
-											select @Command = @Command + ');'
+											select @Command = @Command + ', SORT_IN_TEMPDB = ON);'
 										END
 							
 										--REORGANIZE processes are always ONLINE and are less intense than REBUILDs.  
@@ -258,21 +261,17 @@ BEGIN TRY
 							
 										--OPTIONAL: Only do a full, offline index rebuild in the middle of the night.
 										--ELSE IF datepart(hour, sysdatetimeoffset()) < 3 --inclusive both hours.
-										ELSE 
-										BEGIN	
-							
-											--print '3'		
-								
-											SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '.' + @ObjectName + '] REBUILD';
-								
-											IF @partitioncount > 1
-												SELECT @Command = @Command + ' PARTITION = ' + CONVERT (CHAR, @partitionnum);
-															
-											IF @Can_Compress = 1						
-												SELECT @Command = @Command + ' WITH (DATA_COMPRESSION = PAGE); '
-								
-										
-										END
+										--ELSE 
+										--BEGIN	
+										--	--print '3'		
+										--	SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '.' + @ObjectName + '] REBUILD';
+										--	IF @partitioncount > 1
+										--		SELECT @Command = @Command + ' PARTITION = ' + CONVERT (CHAR, @partitionnum);
+										--	SELECT @Command = @Command + ' WITH ('
+										--	IF @Can_Compress = 1						
+										--		SELECT @Command = @Command + ' DATA_COMPRESSION = PAGE, '
+										--	select @Command = @Command + 'SORT_IN_TEMPDB = ON);'
+										--END
 									END
 								IF @Command <> ''
 								BEGIN
@@ -508,6 +507,5 @@ alter table DBAHound.dbo.IndexMaintLog
 alter column EndTimeStamp	datetimeoffset(2)  null 
 
 select * from DBAHound.dbo.IndexMaintLog
-
 
 */
