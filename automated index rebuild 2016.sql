@@ -1,14 +1,17 @@
 /* Automated index maint script
-Added by William Assaf, Sparkhound 20140304
-Last Modified by William Assaf, Sparkhound 20171204, tweaked criteria for stats updates
---Primary objective is to never perform an offline index rebuild unless it is the only option.
+--Primary objective is to never perform an offline index rebuild unless it is the only option, and desired. Commented out by default.
+
+--Note recent data type changes to the IndexMaintLog table, if it already exists. See comment block at bottom.
+
 */
 --#TODO For each database:
 --Change name after USE below
---Change name in ALTER ... BULK_LOGGED below
---Change name in ALTER ... FULL near end
+--Change name in ALTER ... BULK_LOGGED below if desired to use this. Commented out by default.
+--Change name in ALTER ... FULL near end if desired to use this
+--Change @TestMode variable to 0 when ready for production
+--Change @StartWindow and @EndWindow values as desired.
 
---USE WideWorldImporters --#TODO Change database name
+--USE WideWorldImporters --#TODO Change database name, or set the job step database context
 GO
 DECLARE @TestMode		bit
 DECLARE @StartWindow	tinyint
@@ -21,6 +24,16 @@ SELECT @EndWindow	 =	23	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4
 SET XACT_ABORT ON;
 
 BEGIN TRY 
+
+		IF EXISTS (select state_desc from sys.databases d where database_id = db_id() and (state_desc <> 'online' or is_read_only = 1))
+		THROW 51000, 'This database is not online, skipping', 1;  --stop if this database isn't online or is read_only. It may have already failed before this point anyway.
+
+		IF EXISTS (SELECT dc.database_name
+					   FROM sys.dm_hadr_availability_replica_states  rs
+					   inner join sys.availability_databases_cluster dc on rs.group_id = dc.group_id
+					   WHERE is_local = 1 and role_desc <> 'PRIMARY' and dc.database_name = db_name() 
+					)
+		THROW  51000, 'This database is a secondary replica currently, skipping', 1; --stop if this database is a secondary replica in an AG
 
 		--IF @TestMode = 0 
 		--ALTER DATABASE wideWorldImporters SET RECOVERY BULK_LOGGED; --#TODO Change database name
@@ -158,7 +171,7 @@ BEGIN TRY
 			BEGIN
 				BEGIN TRY 
 				
-						DECLARE @currenthour	int =	datepart(hour, sysdatetime())
+						DECLARE @currenthour	int =	datepart(hour, sysdatetimeoffset())
 
 						IF(@StartWindow > @EndWindow -- wraps midnight
 							AND (	@currenthour >= @StartWindow 
@@ -244,7 +257,7 @@ BEGIN TRY
 										END
 							
 										--OPTIONAL: Only do a full, offline index rebuild in the middle of the night.
-										--ELSE IF datepart(hour, sysdatetime()) < 3 --inclusive both hours.
+										--ELSE IF datepart(hour, sysdatetimeoffset()) < 3 --inclusive both hours.
 										ELSE 
 										BEGIN	
 							
@@ -264,15 +277,15 @@ BEGIN TRY
 								IF @Command <> ''
 								BEGIN
 									INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
-									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetime(), @StartWindow, @EndWindow, @TestMode
+									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @SchemaName + '].[' + @ObjectName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
 						
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
 										PRINT N'Executed:  ' + @Command + ' Frag level: ' + str(@frag)
 										UPDATE DBAHound.dbo.IndexMaintLog 
-										SET EndTimeStamp = sysdatetime()
-										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetime())
+										SET EndTimeStamp = sysdatetimeoffset()
+										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
 
 									END TRY 
@@ -311,7 +324,7 @@ BEGIN TRY
 
 		--Begin smart update stats
 
-		select @currenthour	=	datepart(hour, sysdatetime())
+		select @currenthour	=	datepart(hour, sysdatetimeoffset())
 
 		IF(@StartWindow > @EndWindow -- wraps midnight
 			AND (	@currenthour >= @StartWindow 
@@ -401,7 +414,7 @@ BEGIN TRY
 			BEGIN
 					print 'beginning stats'
 					--Check that we are still in  time frame
-					select @currenthour	=	datepart(hour, sysdatetime())
+					select @currenthour	=	datepart(hour, sysdatetimeoffset())
 					IF(@StartWindow > @EndWindow -- wraps midnight
 						AND (	@currenthour >= @StartWindow 
 							OR	(@currenthour <= @StartWindow 
@@ -424,15 +437,15 @@ BEGIN TRY
 						 from @tsqllist where id = @s
 						
 						INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
-						SELECT DB_NAME(), @runtsql, '[' + DB_Name() + '].[' + @ObjectName + '].[' + @SchemaName + ']', sysdatetime(), @StartWindow, @EndWindow, @TestMode
+						SELECT DB_NAME(), @runtsql, '[' + DB_Name() + '].[' + @SchemaName + '].[' + @ObjectName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
 						
 						BEGIN TRY 
 							IF @TestMode = 0 EXEC (@runtsql);
 
 							PRINT N'Executed:  ' + @runtsql 
 							UPDATE DBAHound.dbo.IndexMaintLog 
-							SET EndTimeStamp = sysdatetime()
-							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetime())
+							SET EndTimeStamp = sysdatetimeoffset()
+							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
 							where id = SCOPE_IDENTITY() and EndTimeStamp is null
 
 						END TRY 
@@ -458,7 +471,7 @@ BEGIN TRY
 	BEGIN CATCH
 		PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
 		INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
-		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetime(), @TestMode
+		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
 		
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
 		DROP TABLE #C__work_to_do;
@@ -468,7 +481,6 @@ BEGIN TRY
 		 	CLOSE curIndexPartitions;
 			DEALLOCATE curIndexPartitions;
 		END
-
 
 	END CATCH
 GO
@@ -480,27 +492,22 @@ CREATE TABLE DBAHound.dbo.IndexMaintLog
 ,	CurrentDatabase sysname not null DEFAULT (DB_NAME())
 ,	Command nvarchar(1000) null
 ,	ObjectName nvarchar(100) null 
-,	BeginTimeStamp	datetime2(0)  null 
+,	BeginTimeStamp	datetimeoffset(2)  null 
 ,	TestMode bit  null
 ,	StartWindow tinyint  null
 ,	EndWindow tinyint  null
-,	EndTimeStamp datetime2(0) null
+,	EndTimeStamp datetimeoffset(2) null
 ,	Duration_s int null
 ,	ErrorMessage nvarchar(4000) null
 )
 
 alter table DBAHound.dbo.IndexMaintLog
-alter column BeginTimeStamp	datetime2(2)  null 
+alter column BeginTimeStamp	datetimeoffset(2)  null 
 
 alter table DBAHound.dbo.IndexMaintLog
-alter column EndTimeStamp	datetime2(2)  null 
+alter column EndTimeStamp	datetimeoffset(2)  null 
 
+select * from DBAHound.dbo.IndexMaintLog
 
-select * from DBAHound.dbo.indexmaintlog
-
-
-update DBAHound.dbo.IndexMaintLog
-set Duration_s = Duration_s - 18000
-where Duration_s >= 18000
 
 */
