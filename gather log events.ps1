@@ -56,7 +56,7 @@ Get-EventLog -LogName "System" -After (Get-Date).AddDays($numDays) |
     $eventLog_Application += $obj
     }
 Get-EventLog -LogName "Security" -After (Get-Date).AddDays($numDays) | 
-    Where-Object {$_.EntryType -match "Error" -or "Critical" -or "Warning"} | 
+    Where-Object {$_.EntryType -match "Failure*"} | 
     Group-Object -Property EventID | ForEach {
     $currentGroup = $_.Group
     $latestMessage = $currentGroup | Sort-Object -Property Time -Descending | Select-Object -First 1
