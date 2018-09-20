@@ -72,8 +72,9 @@
 	
 	print 'update done'
 
-	select * from 
-	(
+	--Optional Insert statement for retaining this data. See toolbox\sessions and requests table.sql for destination.
+	--INSERT INTO dbalogging.dbo.[SessionsAndRequestsLog] 
+	select * from (
 		select		
 			timestamp =	getdate()
 		, r.session_id	, r.host_name	, r.program_name

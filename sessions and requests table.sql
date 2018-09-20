@@ -1,4 +1,4 @@
-USE DBAAdmin
+USE DBALogging 
 GO
 DROP TABLE 
 --this syntax is 2016 only
