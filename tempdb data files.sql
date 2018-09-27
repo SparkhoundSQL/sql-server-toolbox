@@ -5,6 +5,7 @@ go
 DECLARE @cpu_count int 
 select @cpu_count = cpu_count from sys.dm_os_sys_info
 
+--data files
 select mf.name
 , CurrentSize_MB = (d.size*8.)/1024. --actual current file size
 , InitialSize_MB = (mf.size*8.)/1024. --initial file size
@@ -22,4 +23,19 @@ inner join tempdb.sys.database_files d
 on mf.file_id = d.file_id
 and mf.database_id = db_id()
 where d.type_desc = 'rows'
+order by mf.file_id asc
+
+--log file
+select mf.name
+, CurrentSize_MB = (d.size*8.)/1024. --actual current file size
+, InitialSize_MB = (mf.size*8.)/1024. --initial file size
+, GrowthMb = (mf.growth*8.)/1024.
+, mf.is_percent_growth
+, MaxFileSizeMB = CASE WHEN mf.max_size > -1 THEN cast((mf.max_size*8.)/1024. as varchar(100)) ELSE 'Unlimited' END -- "-1" is unlimited
+, Recommendation = CASE WHEN d.size > mf.size THEN 'Increase TempDB Log file size to match or exceed current size.' + CHAR(10) ELSE '' END
+from sys.master_files mf
+inner join tempdb.sys.database_files d
+on mf.file_id = d.file_id
+and mf.database_id = db_id()
+where d.type_desc = 'log'
 order by mf.file_id asc
