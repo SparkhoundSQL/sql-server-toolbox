@@ -130,8 +130,8 @@ select
 ,	ar.session_timeout
 from sys.dm_hadr_database_replica_states dm
 INNER JOIN sys.availability_replicas ar on dm.replica_id = ar.replica_id and dm.group_id = ar.group_id
-INNER JOIN @TransactionDelay td on td.DB = db_name(dm.database_id)
 INNER JOIN sys.availability_groups ag on ag.group_id = dm.group_id
+LEFT OUTER JOIN @TransactionDelay td on td.DB = db_name(dm.database_id) --LEFT OUTER in case the sys.dm_os_performance_counters DMV is blank because of a rare issue with SQL startup. Still returns the rest of the data.
 ORDER BY
 	AG			
 ,	Instance		
