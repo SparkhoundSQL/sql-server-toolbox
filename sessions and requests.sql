@@ -131,14 +131,10 @@
 		, Governor_Pool_ID		=	wg.Pool_id
 		, EndPointName
 		, Protocol
-		, tempdb.session_internal_alloc
-		, tempdb.sesion_internal_dealloc
-		, tempdb.session_user_alloc
-		, tempdb.sesion_user_dealloc
-		, tempdb.task_internal_alloc 
-		, tempdb.task_internal_dealloc
-		, tempdb.task_user_alloc 
-		, tempdb.task_user_dealloc
+		, tempdb.Outstanding_TempDB_Session_Internal_Alloc_pages 
+		, tempdb.Outstanding_TempDB_Session_User_Alloc_pages 
+		, tempdb.Outstanding_TempDB_Task_Internal_Alloc_pages 
+		, tempdb.Outstanding_TempDB_Task_User_Alloc_pages 
 		, stat.total_rows --SQL 2012 only
 		, stat.last_rows --SQL 2012 only
 		from #ExecRequests r
@@ -152,21 +148,19 @@
 		on wg.group_id = r.Governor_Group_Id
 		LEFT OUTER JOIN sys.resource_governor_resource_pools wp
 		on wp.pool_id = wg.Pool_id
-		LEFT OUTER JOIN (SELECT SU.session_id,
-							sum (SU.internal_objects_alloc_page_count)		as session_internal_alloc,
-							sum (SU.internal_objects_dealloc_page_count)	as sesion_internal_dealloc, 
-							sum (SU.user_objects_alloc_page_count)			as session_user_alloc,
-							sum (SU.user_objects_dealloc_page_count)		as sesion_user_dealloc, 
-							sum (TS.internal_objects_alloc_page_count)		as task_internal_alloc ,
-							sum (TS.internal_objects_dealloc_page_count)	as task_internal_dealloc,
-							sum (TS.user_objects_alloc_page_count)			as task_user_alloc ,
-							sum (TS.user_objects_dealloc_page_count)		as task_user_dealloc
-							FROM sys.dm_db_session_space_usage SU
-							inner join sys.dm_db_task_space_usage TS
+		
+		LEFT OUTER JOIN (SELECT SU.session_id
+							, Outstanding_TempDB_Session_Internal_Alloc_pages = sum (SU.internal_objects_alloc_page_count) - sum (SU.internal_objects_dealloc_page_count)
+							, Outstanding_TempDB_Session_User_Alloc_pages = sum (SU.user_objects_alloc_page_count)	 - sum (SU.user_objects_dealloc_page_count)
+							, Outstanding_TempDB_Task_Internal_Alloc_pages = sum (TS.internal_objects_alloc_page_count) - sum (TS.internal_objects_dealloc_page_count)
+							, Outstanding_TempDB_Task_User_Alloc_pages = sum (TS.user_objects_alloc_page_count) - sum (TS.user_objects_dealloc_page_count)
+							FROM tempdb.sys.dm_db_session_space_usage SU
+							inner join tempdb.sys.dm_db_task_space_usage TS
 							on SU.session_id = TS.session_id
 							where SU.session_id > 50    
 							GROUP BY SU.session_id) as tempdb
-		on tempdb.session_id = r.session_id	
+		on tempdb.session_id = r.session_id	 
+
 		CROSS APPLY sys.dm_exec_input_buffer(r.session_id, r.request_id) AS ib   --SQL 2014 SP2+ only
 		
 	) a
