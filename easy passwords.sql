@@ -4,9 +4,8 @@
 -- Passwords are case sensitive.
 
 --First, check for sql logins without policy.
-select name, is_policy_checked from sys.sql_logins where is_policy_checked =0
-
-
+select name, is_policy_checked from sys.sql_logins where is_policy_checked =0 order by name 
+GO
 use master
 go
 drop table 
@@ -32,17 +31,20 @@ and is_fixed_role = 0
 and left(name,3) <> ''###''
 and name <> ''dbo'''
 
+--Add regional and local references, sports, etc.
+insert into #easypasswords (pw) values ('lsutigers'),('lsu'),('Lsu'),('Lsu'),('texas'),('tx'), ('mardigras'), ('MardiGras'),('astros'), ('astro'),('whodat'),('nola'),('saints'),('cowboys'),('texans')
+
 --Most common passwords
-insert into #easypasswords (pw) values (' '),('password'),('sa'),('test'),('qwerty'),('asdf'),('qwertyuiop')
-, ('lsutigers'),('lsu'),('Lsu'),('Lsu')
+insert into #easypasswords (pw) values (' '),('password'),('sa'),('test'),('qwerty'),('asdf'),('qwertyuiop'),('zxcv')
+,('sql'),('db'),('database'),('sequel'),('corp'),('ssa')
 ,('sp'),('sharepoint'),('dev'),('prod'),('bi'),('test')
-, ('x'),('Zz'),('St@rt123'),('1'),('P@ssword'),('bl4ck4ndwhite'),('admin'),('administrator'),('sysadmin'),('sudo'),('root'),('site'),('siteadmin')
+, ('x'),('Zz'),('St@rt123'),('1'),('P@ssword'),('bl4ck4ndwhite'),('admin'),('administrator'),('sysadmin'),('sudo'),('root'),('site'),('siteadmin'),('pw')
 ,('alex'),('.......'),('demo'),('pos')
-, ('123456789'),('12345678'),('1234567'),('123456'),('12345'),('1234'),('123'),('111111'),('123123'),('666666')
+, ('123456789'),('12345678'),('1234567'),('123456'),('12345'),('1234'),('123'),('111111'),('123123'),('666666'),('2000'),('987')
 , ('baseball'),('dragon'),('football'),('monkey'),('letmein'),('baseball'),('mustang'),('access'),('shadow'),('master'),('michael'),('trustno1')
 ,('batman'),('696969'),('superman'),('jesus'),('christ'),('love'),('freedom'),('iloveyou'),('shalom'),('asdfghj'),('prod'),('test'),('dev'),('stayout'),('production'),('prod'),('real')
 , ('abc123'),('ABC123'),('ABC123abc'),('abc123abc'),('abc123ABC'), ('abcd'), ('abcde'), ('abcdef')
-, ('mardigras'), ('MardiGras')
+
 
 --insert into #easypasswords (pw)  select distinct domain = replace(substring(service_account,0, charindex('\',service_account)),' ','' )
 --from sys.dm_server_services --sql2008r2 or higher
@@ -143,10 +145,10 @@ inner join
 (select id, rn = row_number() over (partition by pw COLLATE sql_latin1_general_cp1_cs_as order by id ) 
 from #easypasswords) x 
 on e.id = x.id
-where rn > 1
+where rn > 1;
 
 select 'checking '+ convert(varchar(30), (count(1))) + ' possible permutations' 
-from #easypasswords e 
+from #easypasswords e;
 
 --Finally, compare our rainbow table to the hashes in sys.sql_logins.
 select login = l.name, password = e.pw  COLLATE sql_latin1_general_cp1_cs_as
@@ -154,6 +156,9 @@ from sys.sql_logins l
 cross apply #easypasswords e
 where PWDCOMPARE(e.pw, l.password_hash) = 1
 group by l.name, e.pw  COLLATE sql_latin1_general_cp1_cs_as
+ORDER BY l.name;
+GO
+
 
 
 
