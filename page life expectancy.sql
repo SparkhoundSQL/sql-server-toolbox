@@ -15,7 +15,7 @@ select
 ,	Target_vs_Total = CASE WHEN p.Total_Server_Mem_GB < p.Target_Server_Mem_GB	 
 							THEN 'Target >= Total. SQL wants more memory than it has, or is building up to that point.'
 							ELSE 'Total >= Target. SQL has enough memory to do what it wants.' END
-,	si.LPIM -- Works on SQL 2016 SP1 and above only
+,	si.LPIM -- Works on SQL 2016 SP1, 2012 SP4+
 from(
 select 
 	InstanceName = @@SERVERNAME 
@@ -38,7 +38,7 @@ inner join (SELECT 'InstanceName' = @@SERVERNAME
 on c.InstanceName=os.InstanceName
 
 
--- SQL 2016 SP1 and above only
+-- Works on SQL 2016 SP1, 2012 SP4+
 cross apply (select LPIM = CASE sql_memory_model_Desc 
 					WHEN  'Conventional' THEN 'Lock Pages in Memory privilege is not granted'
 					WHEN 'LOCK_PAGES' THEN 'Lock Pages in Memory privilege is granted'
