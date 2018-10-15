@@ -39,3 +39,19 @@ on mf.file_id = d.file_id
 and mf.database_id = db_id()
 where d.type_desc = 'log'
 order by mf.file_id asc
+
+--To resize tempdb: 
+
+/*
+USE [master]
+GO
+ALTER DATABASE [tempdb]   MODIFY FILE ( NAME = N'<tempdfilename>'  , SIZE = <Desired File Size>);
+GO
+
+USE [tempdb]
+GO
+CHECKPOINT
+GO
+DBCC SHRINKFILE (N'<tempdfilename>' , 0, TRUNCATEONLY);
+GO
+*/
