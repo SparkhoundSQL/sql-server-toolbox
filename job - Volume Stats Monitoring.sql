@@ -1,13 +1,7 @@
 -- Create Table
-USE [DBAHound]
+USE [DBALogging]
 GO
 
-/****** Object:  Table [dbo].[VolumeStats]    Script Date: 11/20/2017 10:01:45 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
 
 CREATE TABLE [dbo].[VolumeStats](
 	[ID] int IDENTITY(1,1) NOT NULL,
@@ -27,48 +21,14 @@ CREATE TABLE [dbo].[VolumeStats](
 GO
 
 --Create Sproc
-USE [DBAHound]
-GO
 
-/****** Object:  StoredProcedure [dbo].[usp_GetVolumeStats]    Script Date: 11/20/2017 10:02:37 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-
-
-/*
-USE DBAHound;
-GO
-
-CREATE TABLE [dbo].[VolumeStats](
-	[ID] [int] IDENTITY(1,1) NOT NULL,
-	[volume_mount_point] [nvarchar](512) NULL,
-	[file_system_type] [nvarchar](512) NULL,
-	[logical_volume_name] [nvarchar](512) NULL,
-	[Total_Size] [DECIMAL(19,2)] NULL,
-	[Available_Size] [DECIMAL(19,2)] NULL,
-	[Space_Free] [DECIMAL(19,2)] NULL,
-	[DateTimeStamp] datetimeoffset(2) NULL,
- CONSTRAINT [PK_VolumeStats] PRIMARY KEY CLUSTERED 
-(	[ID] ASC)
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-) ON [PRIMARY]
-
-GO
-*/
-
-CREATE PROCEDURE [dbo].[usp_GetVolumeStats]
-@Threshold int
+CREATE PROCEDURE [dbo].[Get_VolumeStats]
+@Threshold decimal(9,2)
 AS
 BEGIN
 --Changed all floats and decimal(18,2) to decimal(19,2) - WDA 20170312
-if object_id('tempdb..#VolumeStats') is not null begin drop table #VolumeStats end;
-Create table #VolumeStats
-(ID int identity(1,1),
+DECLARE @VolumeStats TABLE
+(ID int not null identity(1,1),
 volume_mount_point nvarchar(512),
 file_system_type nvarchar(512),
 logical_volume_name nvarchar(512),
@@ -110,7 +70,7 @@ BEGIN
 DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed
 )
     values(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
-    insert into #VolumeStats(volume_mount_point,file_system_type,logical_volume_name,Total_Size,Available_Size,Space_Free,DateTimePerformed)
+    insert into @VolumeStats (volume_mount_point,file_system_type,logical_volume_name,Total_Size,Available_Size,Space_Free,DateTimePerformed)
     VALUES(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
 END
 else
@@ -127,7 +87,7 @@ END
 CLOSE VolumeInfo
 DEALLOCATE VolumeInfo
 
-if (SELECT COUNT(*) FROM #VolumeStats 
+if (SELECT COUNT(*) FROM @VolumeStats 
 where logical_volume_name <> 'TempDBdata' --added to ignore the tempdb drive - 20170311 WDA 
 ) > 0
 BEGIN --added BEGIN/END wrap on IF - WDA 20170312 
@@ -147,7 +107,7 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 				 td = convert(varchar(8),v.Total_Size), '',
 				 td = convert(varchar(8),v.Available_Size), '',
 				 td = convert(varchar(8),v.Space_Free), ''
-				from #VolumeStats v
+				from @VolumeStats v
 				order by v.volume_mount_point
 				  FOR XML PATH('tr'), TYPE   
 		) AS NVARCHAR(MAX) ) +  
@@ -197,8 +157,8 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Volume Stats_Daily Insert', @step_name=
 		@retry_attempts=0, 
 		@retry_interval=0, 
 		@os_run_priority=0, @subsystem=N'TSQL', 
-		@command=N'exec dbo.usp_GetVolumeStats @Threshold = 14;', 
-		@database_name=N'DBAHound', --make sure db name matches
+		@command=N'exec dbo.Get_VolumeStats @Threshold = 14;', 
+		@database_name=N'DBALogging', --make sure db name matches
 		@flags=0
 GO
 USE [msdb]
