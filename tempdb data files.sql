@@ -18,6 +18,8 @@ CASE WHEN d.size <> AVG(d.size) OVER (PARTITION BY mf.database_id) THEN 'Grow Te
 CASE WHEN mf.growth <> AVG(mf.growth) OVER (PARTITION BY mf.database_id) THEN 'Match all TempDB Data files autogrowth rates.' + CHAR(10) ELSE '' END +
 CASE WHEN mf.max_size <> AVG(mf.max_size) OVER (PARTITION BY mf.database_id) THEN 'Match all TempDB Data files max file size.' + CHAR(10) ELSE '' END +
 CASE WHEN count(mf.file_id) OVER (PARTITION BY mf.database_id) > @cpu_count THEN 'Too many TempDB Data files, reduce to '+cast(@cpu_count as varchar(3)) + ' or lower.' + CHAR(10) ELSE '' END
+, mf.physical_name
+
 from sys.master_files mf
 inner join tempdb.sys.database_files d
 on mf.file_id = d.file_id
@@ -33,6 +35,8 @@ select mf.name
 , mf.is_percent_growth
 , MaxFileSizeMB = CASE WHEN mf.max_size > -1 THEN cast((mf.max_size*8.)/1024. as varchar(100)) ELSE 'Unlimited' END -- "-1" is unlimited
 , Recommendation = CASE WHEN d.size > mf.size THEN 'Increase TempDB Log file size to match or exceed current size.' + CHAR(10) ELSE '' END
+, mf.physical_name
+
 from sys.master_files mf
 inner join tempdb.sys.database_files d
 on mf.file_id = d.file_id
