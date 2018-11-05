@@ -25,9 +25,9 @@ MODIFY FILE ( NAME = N''''''+DatabaseFileName_______ COLLATE SQL_Latin1_General_
 			ELSE ''SIZE = ''+STR(FileSizeMB+(FileSizeMB*.05)) END +''MB )''
 FROM (
 SELECT 
-  DatabaseName		= d.name
+  ''DatabaseName_____________'' = d.name
 , Recovery			= d.recovery_model_desc
-, DatabaseFileName	= df.name
+, ''DatabaseFileName_______'' = df.name
 , Location			= df.physical_name
 , File_ID			= df.File_ID
 , FileSizeMB		= CAST(size/128.0 as Decimal(9,2))
