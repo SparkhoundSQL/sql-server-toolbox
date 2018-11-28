@@ -21,7 +21,7 @@ DECLARE @CompressWhenPossible  bit
 SELECT @TestMode	 =	1	-- flip to 1 to run out of cycle, without actually executing any code.
 SELECT @StartWindow	 =	0	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 SELECT @EndWindow	 =	23	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
-SELECT @CompressWhenPossible = 0
+SELECT @CompressWhenPossible = 0 -- Don't introduce new compression on indexes by default.
 
 SET XACT_ABORT ON;
 
@@ -91,12 +91,12 @@ BEGIN TRY
 		, indexname			
 		)
 			SELECT  
-					objectid		=	s.object_id
-				,	indexid			=	s.index_id
-				,	partitionnum	=	s.partition_number
-				,	frag			=	max(s.avg_fragmentation_in_percent)
-				,	Can_Reorg		=	i.ALLOW_PAGE_LOCKS --An index cannot be reorganized when ALLOW_PAGE_LOCKS is set to 0.
-				,Can_RebuildOnline	=	
+					objectid			=	s.object_id
+				,	indexid				=	s.index_id
+				,	partitionnum		=	s.partition_number
+				,	frag				=	max(s.avg_fragmentation_in_percent)
+				,	Can_Reorg			=	i.ALLOW_PAGE_LOCKS --An index cannot be reorganized when ALLOW_PAGE_LOCKS is set to 0.
+				,	Can_RebuildOnline	=	
 						CASE 
 							WHEN A.index_id is not null and A.user_type_id is not null 
 								THEN 0 -- Cannot do ONLINE REBUILDs with certain data types in the index (key or INCLUDE).
