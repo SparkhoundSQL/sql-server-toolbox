@@ -1,48 +1,7 @@
+--CREATES A SQL AGENT JOB
+
 --TODO: Change the operator name sql.alerts@sparkhound.com
---TODO: Uncomment --EXEC (@TSQL) when confirmed
 
-USE [msdb]
-GO
-
---These jobs do not have a notify operator setting
-select j.job_id, j.name, CategoryName = jc.name, j.enabled, j.description
-, OwnerName = suser_sname(j.owner_sid), date_created,date_modified, j.notify_email_operator_id
-  from msdb.dbo.sysjobs  j
-inner join msdb.dbo.syscategories jc
-on j.category_id = jc.category_id
-where j.notify_email_operator_id = 0  
-and j.name not in ('syspolicy_purge_history')
-
-DECLARE AddFailureNotifications CURSOR FAST_FORWARD 
-FOR
-select convert(nvarchar(4000),	'
-EXEC msdb.dbo.sp_update_job @job_id=N'''+convert(varchar(64), job_id)+''', /*'+j.name+'*/ 
-		@notify_level_email=2, 
-		@notify_email_operator_name=N''sql.alerts@sparkhound.com''')
-from msdb.dbo.sysjobs  j
-where j.notify_email_operator_id = 0  
-and j.name not in ('syspolicy_purge_history')
-
-declare @TSQL nvarchar(4000) = null
-OPEN AddFailureNotifications
-FETCH NEXT FROM AddFailureNotifications 
-INTO @TSQL
-
-WHILE @@FETCH_STATUS = 0
-BEGIN
-	--EXEC (@TSQL)
-	SELECT @TSQL
-	FETCH NEXT FROM AddFailureNotifications 
-	INTO @TSQL
-END
-
-CLOSE AddFailureNotifications
-DEALLOCATE AddFailureNotifications;
-
-/*
-
---Change the operator name sql.alerts@sparkhound.com
---you may need to change the @server_name value below
 USE [msdb]
 GO
 BEGIN TRANSACTION
@@ -64,7 +23,7 @@ EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Add Failure Notifications',
 		@description=N'Adds failure notification emails to any jobs that are created', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'sql.alerts@sparkhound.com', @job_id = @jobId OUTPUT
+		@notify_email_operator_name=N'sql.alerts@sparkhound.com', @job_id = @jobId OUTPUT --TODO: CHANGE THIS OPERATOR NAME
 IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
 EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'tsql', 
 		@step_id=1, 
@@ -85,7 +44,7 @@ EXEC msdb.dbo.sp_update_job @job_id=N''''''+convert(varchar(64), job_id)+'''''',
 		@notify_level_email=2, 
 		@notify_level_netsend=2, 
 		@notify_level_page=2, 
-		@notify_email_operator_name=N''''sql.alerts@sparkhound.com'''''')
+		@notify_email_operator_name=N''''sql.alerts@sparkhound.com'''''') --TODO: CHANGE THIS OPERATOR NAME
 from msdb.dbo.sysjobs 
 where notify_email_operator_id = 0
 declare @tsql nvarchar(4000) = null
