@@ -3,7 +3,9 @@
 --In this demo, we'll insert 8.2 million rows into a table, then read 7 million sequential rows out of the table.
 --Compare disk-based tables and in-memory tables, with or without columnstore, and also non-durable in-memory tables.
 --20180214 WDA
+/*
 
+--Cleanup
 EXEC msdb.dbo.sp_delete_database_backuphistory @database_name = N'w_memopt'
 GO
 USE [master]
@@ -12,6 +14,7 @@ ALTER DATABASE [w_memopt] SET  SINGLE_USER WITH ROLLBACK IMMEDIATE
 GO
 DROP DATABASE [w_memopt]
 GO
+*/
 USE [master]
 GO
 print '------Starting'

@@ -1,15 +1,15 @@
 --TODO: Change the operator name sql.alerts@sparkhound.com
 --TODO: Uncomment --EXEC (@TSQL) when confirmed
 
-
+SET NOCOUNT ON
 --These jobs do not have a notify operator setting
-select j.job_id, j.name, CategoryName = jc.name, j.enabled, j.description
-, OwnerName = suser_sname(j.owner_sid), date_created,date_modified, j.notify_email_operator_id
-  from msdb.dbo.sysjobs  j
-inner join msdb.dbo.syscategories jc
-on j.category_id = jc.category_id
-where j.notify_email_operator_id = 0  
-and j.name not in ('syspolicy_purge_history')
+--select j.job_id, j.name, CategoryName = jc.name, j.enabled, j.description
+--, OwnerName = suser_sname(j.owner_sid), date_created,date_modified, j.notify_email_operator_id
+--  from msdb.dbo.sysjobs  j
+--inner join msdb.dbo.syscategories jc
+--on j.category_id = jc.category_id
+--where j.notify_email_operator_id = 0  
+--and j.name not in ('syspolicy_purge_history')
 
 DECLARE AddFailureNotifications CURSOR FAST_FORWARD 
 FOR
