@@ -39,12 +39,13 @@ FROM (	SELECT
 GROUP BY x.DB , x.[schema_name] , x.[table_name] 
 
 HAVING 1=1
-AND	SUM(page_count) > 1280 --1280 pages is 10mb, ignore anything smaller
-AND AVG(avg_fragmentation_pct) > 50
+--AND	SUM(page_count) > 1280 --1280 pages is 10mb, ignore anything smaller
+--AND AVG(avg_fragmentation_pct) > 50
 
 ORDER BY SUM(page_count) desc, AVG(avg_fragmentation_pct) desc;
 
 /*
-
+ALTER INDEX ALL ON SPARK.dbo.GL20000 REBUILD WITH (SORT_IN_TEMPDB = ON);
+ALTER INDEX ALL ON SPARK.dbo.RM10101 REBUILD WITH (SORT_IN_TEMPDB = ON);
 
 */
