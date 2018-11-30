@@ -1,10 +1,10 @@
-/*=====================================================================
-original AUTHOR:    trayce@seekwellandprosper.com
-*/
+--Inspired by trayce@seekwellandprosper.com
+
+--CASE statements to test the whether event\@timestamp is a date is because of this bug: https://blogs.msdn.microsoft.com/psssql/2015/05/04/xevent-timestamp-is-a-large-integer-value-not-the-expected-datatime-value/
+
 SET NOCOUNT ON
 USE [TempDB]
 GO
-
 DECLARE @XELTarget VARCHAR(MAX);
 DECLARE @XELPath VARCHAR(MAX);
 DECLARE @XELFile VARCHAR(max);
@@ -34,7 +34,7 @@ END
 
 
 --create table
-CREATE TABLE #AOHealth_XELData
+DECLARE @AOHealth_XELData TABLE --CREATE TABLE @AOHealth_XELData
     (ID INT IDENTITY PRIMARY KEY CLUSTERED,
     object_name varchar(max),
     EventData XML,
@@ -43,7 +43,7 @@ CREATE TABLE #AOHealth_XELData
 
 --read from the files into the table
 IF @XELFile IS NOT NULL BEGIN
-	INSERT INTO #AOHealth_XELData
+	INSERT INTO @AOHealth_XELData
 	SELECT object_name, cast(event_data as XML) AS EventData,
 	  file_name, File_Offset
 	  FROM sys.fn_xe_file_target_read_file(
@@ -51,8 +51,9 @@ IF @XELFile IS NOT NULL BEGIN
 END
 
 -- Create table for "error_reported" events
-CREATE TABLE #error_reported (Xevent varchar(15),
-	TimeStampUTC DATETIME, 
+DECLARE @error_reported TABLE --CREATE TABLE @error_reported 
+(Xevent varchar(15),
+	TimeStampUTC varchar(25),  --because sometimes it's a long integer because of an internal bug
 	error_number INT, 
 	severity INT, 
 	state INT, 
@@ -63,8 +64,15 @@ CREATE TABLE #error_reported (Xevent varchar(15),
 	destination_desc varchar(20),
 	is_intercepted varchar(5),
 	message varchar(max))
-INSERT INTO #error_reported
-SELECT  CAST(object_name as varchar(15)) AS Xevent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+
+INSERT INTO @error_reported
+SELECT  CAST(object_name as varchar(15)) AS Xevent, 
+	CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
     EventData.value('(event/data[@name="error_number"]/value)[1]', 'int') AS error_number,
     EventData.value('(event/data[@name="severity"]/value)[1]', 'int') AS severity,
     EventData.value('(event/data[@name="state"]/value)[1]', 'int') AS state,
@@ -75,20 +83,20 @@ SELECT  CAST(object_name as varchar(15)) AS Xevent, EventData.value('(event/@tim
     EventData.value('(event/data[@name="destination"]/text)[1]', 'varchar(20)') AS destination_desc,
     EventData.value('(event/data[@name="is_intercepted"]/value)[1]', 'varchar(5)') AS is_intercepted,
     EventData.value('(event/data[@name="message"]/value)[1]', 'varchar(max)') AS message
-    FROM #AOHealth_XELData
+    FROM @AOHealth_XELData
     WHERE EventData.value('(event/@name)[1]', 'varchar(max)') = 'error_reported';
 
-IF EXISTS(SELECT * FROM #error_reported) BEGIN
+IF EXISTS(SELECT * FROM @error_reported) BEGIN
 	PRINT 'Error event stats'
 	PRINT '=================';
 	--display results from "error_reported" event data
-	WITH ErrorCTE (ErrorNum, ErrorCount, FirstDate, LastDate) AS (
-	SELECT error_number, Count(error_number), min(TimeStampUTC), max(TimeStampUTC) As ErrorCount FROM #error_reported
+	WITH ErrorCTE (ErrorNum, ErrorCount, FirstDateUTC, LastDateUTC) AS (
+	SELECT error_number, Count(error_number), min(TimeStampUTC), max(TimeStampUTC) As ErrorCount FROM @error_reported
 		GROUP BY error_number) 
 	SELECT ErrorNum,
 		ErrorCount,--CAST(ErrorCount as CHAR(10)) ErrorCount,
-		CONVERT(CHAR(25), FirstDate,121) FirstDate,
-		CONVERT(CHAR(25), LastDate, 121) LastDate,
+		CONVERT(datetimeoffset(2), FirstDateUTC,121) FirstDateUTC,
+		CONVERT(datetimeoffset(2), LastDateUTC, 121) LastDateUTC,
 			CAST(CASE ErrorNum 
 			WHEN 35202 THEN 'A connection for availability group ... has been successfully established...'
 			WHEN 1480 THEN 'The %S_MSG database "%.*ls" is changing roles ... because the AG failed over ...'
@@ -106,10 +114,10 @@ IF EXISTS(SELECT * FROM #error_reported) BEGIN
 		 FROM
 		ErrorCTE ec LEFT JOIN sys.messages m on ec.ErrorNum = m.message_id
 		and m.language_id = 1033
-	order by ErrorCount DESC, LastDate DESC 
+	order by LastDateUTC DESC, ErrorCount DESC
 END
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'alwayson_ddl_executed')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'alwayson_ddl_executed')
 BEGIN
 	PRINT 'Non-failover DDL Events';
 	PRINT '=======================';
@@ -117,7 +125,12 @@ BEGIN
 		availability_group_name, availability_group_id, [statement])
 	AS
 	(
-		SELECT  object_name, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+		SELECT  object_name, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		EventData.value('(event/data[@name="ddl_action"]/value)[1]', 'int') AS ddl_action,
 		EventData.value('(event/data[@name="ddl_action"]/text)[1]', 'varchar(15)') AS ddl_action_desc,
 		EventData.value('(event/data[@name="ddl_phase"]/value)[1]', 'int') AS ddl_phase,
@@ -125,7 +138,7 @@ BEGIN
 		EventData.value('(event/data[@name="availability_group_name"]/value)[1]', 'varchar(25)') AS availability_group_name,
 		EventData.value('(event/data[@name="availability_group_id"]/value)[1]', 'varchar(36)') AS availability_group_id,
 		EventData.value('(event/data[@name="statement"]/value)[1]', 'varchar(max)') AS [statement]
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'alwayson_ddl_executed'
 			AND EventData.value('(event/data[@name="statement"]/value)[1]', 'varchar(max)') NOT LIKE '%FAILOVER%'
 			OR (EventData.value('(event/data[@name="statement"]/value)[1]', 'varchar(max)') LIKE '%FAILOVER%' AND
@@ -138,7 +151,7 @@ BEGIN
 		ELSE CAST(Replace([statement], char(10), '') as varchar(220)) 
 		END as [statement]
 		FROM AODDL
-		ORDER BY TimeStampUTC;
+		ORDER BY TimeStampUTC desc;
 
 
 	PRINT 'Failover DDL Events';
@@ -148,7 +161,12 @@ BEGIN
 		availability_group_name, availability_group_id, [statement])
 	AS
 	(
-		SELECT  object_name, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+		SELECT  object_name, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		EventData.value('(event/data[@name="ddl_action"]/value)[1]', 'int') AS ddl_action,
 		EventData.value('(event/data[@name="ddl_action"]/text)[1]', 'varchar(15)') AS ddl_action_desc,
 		EventData.value('(event/data[@name="ddl_phase"]/value)[1]', 'int') AS ddl_phase,
@@ -156,7 +174,7 @@ BEGIN
 		EventData.value('(event/data[@name="availability_group_name"]/value)[1]', 'varchar(25)') AS availability_group_name,
 		EventData.value('(event/data[@name="availability_group_id"]/value)[1]', 'varchar(36)') AS availability_group_id,
 		EventData.value('(event/data[@name="statement"]/value)[1]', 'varchar(max)') AS [statement]
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'alwayson_ddl_executed'
 			AND (EventData.value('(event/data[@name="statement"]/value)[1]', 'varchar(max)') LIKE '%FAILOVER%'
 					OR EventData.value('(event/data[@name="statement"]/value)[1]', 'varchar(max)') LIKE '%FORCE%')
@@ -166,45 +184,60 @@ BEGIN
 		ddl_phase_desc, availability_group_name, availability_group_id, 
 		CAST(Replace([statement], char(10), '') as varchar(80)) as [statement]
 		FROM AODDL
-		ORDER BY TimeStampUTC;
+		ORDER BY TimeStampUTC desc;
 END
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'availability_replica_manager_state_change')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'availability_replica_manager_state_change')
 BEGIN
 	PRINT 'Availability Replica Manager state changes'
 	PRINT '==========================================';
 	-- display results for "availability_replica_manager_state_change" events
-	SELECT cast(object_name as varchar(42)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetimeoffset') AS TimeStampUTC,
+	SELECT cast(object_name as varchar(42)) AS XEvent, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		EventData.value('(event/data[@name="current_state"]/value)[1]', 'int') AS current_state,
 		EventData.value('(event/data[@name="current_state"]/text)[1]', 'varchar(30)') AS current_state_desc
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'availability_replica_manager_state_change'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetimeoffset') desc;
+		ORDER BY TimeStampUTC desc;
 END
 
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'availability_replica_state')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'availability_replica_state')
 BEGIN
 	PRINT 'Availability Replica state'
 	PRINT '==========================';
 	-- display results for "availability_replica_state" events
-	SELECT cast(object_name as varchar(34)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+	SELECT cast(object_name as varchar(34)) AS XEvent, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		EventData.value('(event/data[@name="current_state"]/value)[1]', 'int') AS current_state,
 		EventData.value('(event/data[@name="current_state"]/text)[1]', 'varchar(20)') AS current_state_desc,
 		EventData.value('(event/data[@name="availability_group_name"]/value)[1]', 'varchar(36)') AS availability_group_name,
 		EventData.value('(event/data[@name="availability_group_id"]/value)[1]', 'varchar(36)') AS availability_group_id,
 		EventData.value('(event/data[@name="availability_replica_id"]/value)[1]', 'varchar(36)') AS availability_replica_id
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'availability_replica_state'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime');
+		ORDER BY TimeStampUTC desc;
 END
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'availability_replica_state_change')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'availability_replica_state_change')
 BEGIN
 	PRINT 'Availability Replica state changes'
 	PRINT '==================================';
 	-- display results for "availability_replica_state_change" events
-	SELECT cast(object_name as varchar(34)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetimeoffset') AS TimeStampUTC,
+	SELECT cast(object_name as varchar(34)) AS XEvent, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		IsNULL(EventData.value('(event/data[@name="availability_replica_name"]/value)[1]', 'varchar(25)'), 'Data Unavailable') AS availability_replica_name,
 		EventData.value('(event/data[@name="availability_group_name"]/value)[1]', 'varchar(25)') AS availability_group_name,
 		EventData.value('(event/data[@name="previous_state"]/value)[1]', 'int') AS previous_state,
@@ -213,30 +246,40 @@ BEGIN
 		EventData.value('(event/data[@name="current_state"]/text)[1]', 'varchar(30)') AS current_state_desc,
 		EventData.value('(event/data[@name="availability_replica_id"]/value)[1]', 'varchar(36)') AS availability_replica_id,
 		EventData.value('(event/data[@name="availability_group_id"]/value)[1]', 'varchar(36)') AS availability_group_id
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'availability_replica_state_change'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime') DESC;
+		ORDER BY TimeStampUTC DESC;
 END
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'availability_group_lease_expired')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'availability_group_lease_expired')
 BEGIN
 	PRINT 'Lease Expiration Events'
 	PRINT '=======================';
 	-- Display results "lease expiration" events
-	SELECT  cast(object_name as varchar(33)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+	SELECT  cast(object_name as varchar(33)) AS XEvent, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		EventData.value('(event/data[@name="availability_group_name"]/value)[1]', 'varchar(25)') AS AGName,
 		EventData.value('(event/data[@name="availability_group_id"]/value)[1]', 'varchar(36)') AS AG_ID
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'availability_group_lease_expired'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime');
+		ORDER BY TimeStampUTC desc;
 END
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'lock_redo_blocked')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'lock_redo_blocked')
 BEGIN
 	PRINT 'BLOCKED REDO Events'
 	PRINT '===================';
 	-- Display results "lock_redo_blocked" events
-		SELECT cast(object_name as varchar(42)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+		SELECT cast(object_name as varchar(42)) AS XEvent, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		EventData.value('(event/data[@name="resource_type"]/value)[1]', 'int') AS ResourceType,
 		EventData.value('(event/data[@name="resource_type"]/text)[1]', 'varchar(25)') AS ResourceTypeDesc,
 		EventData.value('(event/data[@name="mode"]/value)[1]', 'int') AS Mode,
@@ -255,17 +298,22 @@ BEGIN
 		EventData.value('(event/data[@name="associated_object_id"]/value)[1]', 'bigint') AS associated_object_id,
 		EventData.value('(event/data[@name="duration"]/value)[1]', 'int') AS duration,
 		EventData.value('(event/data[@name="resource_description"]/value)[1]', 'varchar(25)') AS resource_description
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'lock_redo_blocked'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime');
+		ORDER BY TimeStampUTC desc;
 END
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'hadr_db_partner_set_sync_state')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'hadr_db_partner_set_sync_state')
 BEGIN
 	PRINT 'hadr_db_partner_set_sync_state Events'
 	PRINT '=====================================';
 	-- Display results "hadr_db_partner_set_sync_state" events
-	   SELECT cast(object_name as varchar(42)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+	   SELECT cast(object_name as varchar(42)) AS XEvent, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 			EventData.value('(event/data[@name="database_id"]/value)[1]', 'int') AS database_id,
 			EventData.value('(event/data[@name="commit_policy"]/value)[1]', 'int') AS commit_policy,
 			EventData.value('(event/data[@name="commit_policy"]/text)[1]', 'varchar(20)') AS commit_policy_desc,
@@ -277,17 +325,22 @@ BEGIN
 			EventData.value('(event/data[@name="group_id"]/value)[1]', 'varchar(36)') AS group_id,
 			EventData.value('(event/data[@name="replica_id"]/value)[1]', 'varchar(36)') AS replica_id,
 			EventData.value('(event/data[@name="ag_database_id"]/value)[1]', 'varchar(36)') AS ag_database_id
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'hadr_db_partner_set_sync_state'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime');
+		ORDER BY TimeStampUTC desc;
 END
 
-IF EXISTS(SELECT object_name FROM #AOHealth_XELData WHERE object_name = 'availability_replica_automatic_failover_validation')
+IF EXISTS(SELECT object_name FROM @AOHealth_XELData WHERE object_name = 'availability_replica_automatic_failover_validation')
 BEGIN
 	PRINT 'availability_replica_automatic_failover_validation'
 	PRINT '==================================================';
 	-- Display results "availability_replica_automatic_failover_validation" events
-	   SELECT cast(object_name as varchar(50)) AS XEvent, EventData.value('(event/@timestamp)[1]', 'datetime') AS TimeStampUTC,
+	   SELECT cast(object_name as varchar(50)) AS XEvent, CASE WHEN 
+			ISDATE(EventData.value('(event/@timestamp)[1]', 'varchar(25)') ) =0 
+			THEN NULL
+			ELSE CAST(EventData.value('(event/@timestamp)[1]', 'datetimeoffset(2)') as DATETIMEOFFSET)
+			END			
+			AS TimeStampUTC,
 		EventData.value('(event/data[@name="availability_replica_name"]/value)[1]', 'varchar(25)') AS availability_replica_name,
 		EventData.value('(event/data[@name="availability_group_name"]/value)[1]', 'varchar(25)') AS availability_group_name,
 		EventData.value('(event/data[@name="availability_replica_id"]/value)[1]', 'varchar(36)') AS availability_replica_id,
@@ -295,13 +348,14 @@ BEGIN
 		EventData.value('(event/data[@name="forced_quorum"]/value)[1]', 'varchar(5)') AS forced_quorum,
 		EventData.value('(event/data[@name="joined_and_synchronized"]/value)[1]', 'varchar(5)') AS joined_and_synchronized,
 		EventData.value('(event/data[@name="previous_primary_or_automatic_failover_target"]/value)[1]', 'varchar(5)') AS previous_primary_or_automatic_failover_target
-		FROM #AOHealth_XELData
+		FROM @AOHealth_XELData
 		WHERE object_name = 'availability_replica_automatic_failover_validation'
-		ORDER BY EventData.value('(event/@timestamp)[1]', 'datetime');
+		ORDER BY TimeStampUTC desc;
 END
 
-CREATE TABLE #AOHealthSummary (XEvent varchar(50), [COUNT] INT);
-INSERT INTO #AOHealthSummary 
+DECLARE @AOHealthSummary TABLE --CREATE TABLE @AOHealthSummary 
+(XEvent varchar(50), [COUNT] INT);
+INSERT INTO @AOHealthSummary 
 SELECT CAST(xv.event_name AS VARCHAR(50)), 0
 	FROM sys.dm_xe_sessions xes
 	INNER JOIN sys.dm_xe_session_events xv ON xes.address = xv.event_session_address
@@ -310,21 +364,19 @@ SELECT CAST(xv.event_name AS VARCHAR(50)), 0
 
 With Summary (XEvent, [Count])
 AS (SELECT CAST(object_name AS VARCHAR(50)) AS [XEvent], count(*) AS [Count] 
-	FROM #AOHealth_XELData
+	FROM @AOHealth_XELData
 	GROUP BY object_name)
-UPDATE #AOHealthSummary
+UPDATE @AOHealthSummary
 	SET [COUNT] = s.[COUNT] 
 	FROM Summary s
-	INNER JOIN #AOHealthSummary ao ON s.XEvent = ao.XEvent;
+	INNER JOIN @AOHealthSummary ao ON s.XEvent = ao.XEvent;
 
-IF EXISTS(SELECT * FROM #AOHealthSummary) BEGIN
+IF EXISTS(SELECT * FROM @AOHealthSummary) BEGIN
 	PRINT 'Summary event counts for AO Health XEvents'
 	PRINT '==========================================';
 	-- Display event counts for AO Health XEvent data
-	SELECT * FROM #AOHealthSummary
+	SELECT * FROM @AOHealthSummary
 	ORDER BY [count] DESC, XEvent
 END
 
-DROP TABLE #AOHealth_XELData
-DROP TABLE #error_reported
-DROP TABLE #AOHealthSummary
+GO
