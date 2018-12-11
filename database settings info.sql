@@ -1,5 +1,3 @@
---TEST
-
 IF OBJECT_ID('tempdb..#DBSettings') IS NOT NULL
     BEGIN
 	   DROP TABLE #DBSettings;
