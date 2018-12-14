@@ -6,7 +6,7 @@
 */
 --#TODO For each database:
 --Change name after USE below
---Change name in ALTER ... BULK_LOGGED below if desired to use this. Commented out by default.
+--Change name in ALTER ... BULK_LOGGED below if desired to use this. Commented out by default because this isn't feasible in many situations.
 --Change name in ALTER ... FULL near end if desired to use this
 --Change @TestMode variable to 0 when ready for production
 --Change @StartWindow and @EndWindow values as desired.
@@ -21,7 +21,7 @@ DECLARE @CompressWhenPossible  bit
 SELECT @TestMode	 =	1	-- flip to 1 to run out of cycle, without actually executing any code.
 SELECT @StartWindow	 =	0	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 SELECT @EndWindow	 =	23	-- Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
-SELECT @CompressWhenPossible = 0 -- Don't introduce new compression on indexes by default.
+SELECT @CompressWhenPossible = 0 -- 0 = Don't introduce new compression on indexes. 1= Compress when possible, even currently uncompressed databases.
 
 SET XACT_ABORT ON;
 
@@ -275,14 +275,14 @@ BEGIN TRY
 									END
 								IF @Command <> ''
 								BEGIN
-									INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
+									INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
 									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @SchemaName + '].[' + @ObjectName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
 						
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
 										PRINT N'Executed:  ' + @Command + ' Frag level: ' + str(@frag)
-										UPDATE DBAHound.dbo.IndexMaintLog 
+										UPDATE DBALogging.dbo.IndexMaintLog 
 										SET EndTimeStamp = sysdatetimeoffset()
 										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -290,7 +290,7 @@ BEGIN TRY
 									END TRY 
 									BEGIN CATCH
 										Print N'Error: ' + ERROR_MESSAGE()
-										UPDATE DBAHound.dbo.IndexMaintLog 
+										UPDATE DBALogging.dbo.IndexMaintLog 
 										SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
 									END CATCH
@@ -435,14 +435,14 @@ BEGIN TRY
 							,	@SchemaName	 = SchemaName
 						 from @tsqllist where id = @s
 						
-						INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
+						INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
 						SELECT DB_NAME(), @runtsql, '[' + DB_Name() + '].[' + @SchemaName + '].[' + @ObjectName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
 						
 						BEGIN TRY 
 							IF @TestMode = 0 EXEC (@runtsql);
 
 							PRINT N'Executed:  ' + @runtsql 
-							UPDATE DBAHound.dbo.IndexMaintLog 
+							UPDATE DBALogging.dbo.IndexMaintLog 
 							SET EndTimeStamp = sysdatetimeoffset()
 							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
 							where id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -450,7 +450,7 @@ BEGIN TRY
 						END TRY 
 						BEGIN CATCH
 							Print N'Error: ' + ERROR_MESSAGE()
-							UPDATE DBAHound.dbo.IndexMaintLog 
+							UPDATE DBALogging.dbo.IndexMaintLog 
 							SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
 							where id = SCOPE_IDENTITY() and EndTimeStamp is null
 						END CATCH
@@ -469,7 +469,7 @@ BEGIN TRY
 	END TRY
 	BEGIN CATCH
 		PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
-		INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
+		INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
 		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
 		
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
@@ -485,8 +485,8 @@ BEGIN TRY
 GO
 
 /*
-DROP TABLE DBAHound.dbo.IndexMaintLog;
-CREATE TABLE DBAHound.dbo.IndexMaintLog
+DROP TABLE DBALogging.dbo.IndexMaintLog;
+CREATE TABLE DBALogging.dbo.IndexMaintLog
 (	id int not null identity(1,1) PRIMARY KEY
 ,	CurrentDatabase sysname not null DEFAULT (DB_NAME())
 ,	Command nvarchar(1000) null
@@ -500,12 +500,13 @@ CREATE TABLE DBAHound.dbo.IndexMaintLog
 ,	ErrorMessage nvarchar(4000) null
 )
 
-alter table DBAHound.dbo.IndexMaintLog
+--For previous installs:
+alter table DBALogging.dbo.IndexMaintLog
 alter column BeginTimeStamp	datetimeoffset(2)  null 
 
-alter table DBAHound.dbo.IndexMaintLog
+alter table DBALogging.dbo.IndexMaintLog
 alter column EndTimeStamp	datetimeoffset(2)  null 
 
-select * from DBAHound.dbo.IndexMaintLog
+select * from DBALogging.dbo.IndexMaintLog
 
 */
