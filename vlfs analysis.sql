@@ -120,15 +120,13 @@ Truncate Table #Log;'
 
 Drop Table #Log;
 
---CitizensBilling_QA	291	1744.00	5.99
---RAPID_be_Phase2_UAT	96	1151.00	11.99
-
---RAPID_be_Phase2_UAT	20	1151.00	57.55
 
 /*
 More reference
+A VLF is comprised of 1 or more log blocks each of which is an integer multiple of 512 bytes, but no more than 60KB total in size.
 ----http://www.sqlskills.com/blogs/kimberly/transaction-log-vlfs-too-many-or-too-few/
 ----http://www.sqlskills.com/blogs/kimberly/8-steps-to-better-transaction-log-throughput/
+----https://blogs.msdn.microsoft.com/alwaysonpro/2013/09/27/performing-transaction-log-backups-using-alwayson-availability-group-read-only-secondary-replicas-part-1/
 ----https://www.red-gate.com/simple-talk/sql/database-administration/sql-server-transaction-log-fragmentation-a-primer/
 ---"If you need a 2GB log then just create that as one step. 
 ---If you need a 20GB log, create that as 8GB, then extend it to 16GB and then to 20GB"
