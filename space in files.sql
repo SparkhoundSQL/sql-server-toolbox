@@ -4,6 +4,7 @@ DECLARE @TempTable TABLE
 ,DatabaseFileName varchar(500)
 ,FileLocation varchar(500)
 ,FileId int
+,type_desc varchar(50)
 ,FileSizeMB decimal(19,2)
 ,SpaceUsedMB decimal(19,2)
 ,AvailableMB decimal(19,2)
@@ -30,6 +31,7 @@ SELECT
 , ''DatabaseFileName_______'' = df.name
 , Location			= df.physical_name
 , File_ID			= df.File_ID
+, df.type_desc
 , FileSizeMB		= CAST(size/128.0 as Decimal(9,2))
 , SpaceUsedMB		= CAST(CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0 as Decimal(9,2))
 , AvailableMB		= CAST(size/128.0 - CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0 as Decimal(9,2))
