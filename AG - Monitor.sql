@@ -96,8 +96,8 @@ select @BytesFlushed_End_ms =  MAX(ms_ticks), @BytesFlushed_End = MAX(cntr_value
 from sys.dm_os_sys_info
 CROSS APPLY sys.dm_os_performance_counters where counter_name like 'Log Bytes Flushed/sec%'
 
-declare @LogBytesFushed decimal(19,2) 
-set @LogBytesFushed = (@BytesFlushed_End - @BytesFlushed_Start) / NULLIF(@BytesFlushed_End_ms - @BytesFlushed_Start_ms,0)
+declare @LogBytesFlushed decimal(19,2) 
+set @LogBytesFlushed = (@BytesFlushed_End - @BytesFlushed_Start) / NULLIF(@BytesFlushed_End_ms - @BytesFlushed_Start_ms,0)
 
 --select * from @TransactionDelay
 
@@ -116,7 +116,9 @@ select
 ,	Redo_queue_size_MB		= convert(decimal(19,2),dm.redo_queue_size/1024.)--KB
 ,	Redo_rate_MB_per_s		= convert(decimal(19,2),dm.redo_rate/1024.) --KB/s
 ,	Redo_Time_Left_s_RTO	= convert(decimal(19,2),dm.redo_queue_size*1./NULLIF(dm.redo_rate*1.,0)) --only part of RTO. NULL value on secondary replica indicates no sampled activity.
-,	Log_Send_Queue_RPO		= convert(decimal(19,2),dm.log_send_queue_size*1./NULLIF(@LogBytesFushed ,0)) --Rate. NULL value on secondary replica indicates no sampled activity.
+,	Log_Send_Queue_Size_MB		= convert(decimal(19,2),dm.log_send_queue_size/1024.) 
+,	Log_Send_Queue_Bytes_flushed_per_s = NULLIF(@LogBytesFlushed ,0)
+,	Log_Send_Queue_Time_Left_s_RPO	= convert(decimal(19,2),dm.log_send_queue_size*1./NULLIF(@LogBytesFlushed ,0)) --Rate. NULL value on secondary replica indicates no sampled activity.
 ,	Sampled_Transactions_count		= (td.MirroredWriteTranspersec_end - td.MirroredWriteTranspersec_start)  
 ,	Sampled_Transaction_Delay_ms	= (td.TransactionDelay_end - td.TransactionDelay_start)  
 --Transaction Delay numbers will be 0 if there is no synchronous replica for the DB
