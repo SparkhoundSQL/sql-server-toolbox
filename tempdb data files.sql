@@ -19,11 +19,16 @@ CASE WHEN mf.growth <> AVG(mf.growth) OVER (PARTITION BY mf.database_id) THEN 'M
 CASE WHEN mf.max_size <> AVG(mf.max_size) OVER (PARTITION BY mf.database_id) THEN 'Match all TempDB Data files max file size.' + CHAR(10) ELSE '' END +
 CASE WHEN count(mf.file_id) OVER (PARTITION BY mf.database_id) > @cpu_count THEN 'Too many TempDB Data files, reduce to '+cast(@cpu_count as varchar(3)) + ' or lower.' + CHAR(10) ELSE '' END
 , mf.physical_name
-
+, volume_letter = UPPER(vs.volume_mount_point)
+, file_system_type
+, drive_size_GB = (CONVERT(decimal(19,2), vs.total_bytes/1024./1024./1024. ))
+, drive_free_space_GB = (CONVERT(decimal(19,2), vs.available_bytes/1024./1024./1024. ))
+, drive_percent_free = (CONVERT(DECIMAL(5,2), vs.available_bytes * 100.0 / vs.total_bytes))
 from sys.master_files mf
 inner join tempdb.sys.database_files d
 on mf.file_id = d.file_id
 and mf.database_id = db_id()
+cross apply sys.dm_os_volume_stats(mf.database_id, mf.file_id) vs --only return volumes where there is database file (data or log)
 where d.type_desc = 'rows'
 order by mf.file_id asc
 
@@ -36,11 +41,16 @@ select mf.name
 , MaxFileSizeMB = CASE WHEN mf.max_size > -1 THEN cast((mf.max_size*8.)/1024. as varchar(100)) ELSE 'Unlimited' END -- "-1" is unlimited
 , Recommendation = CASE WHEN d.size > mf.size THEN 'Increase TempDB Log file size to match or exceed current size.' + CHAR(10) ELSE '' END
 , mf.physical_name
-
+, volume_letter = UPPER(vs.volume_mount_point)
+, file_system_type
+, drive_size_GB = (CONVERT(decimal(19,2), vs.total_bytes/1024./1024./1024. ))
+, drive_free_space_GB = (CONVERT(decimal(19,2), vs.available_bytes/1024./1024./1024. ))
+, drive_percent_free = (CONVERT(DECIMAL(5,2), vs.available_bytes * 100.0 / vs.total_bytes))
 from sys.master_files mf
 inner join tempdb.sys.database_files d
 on mf.file_id = d.file_id
 and mf.database_id = db_id()
+cross apply sys.dm_os_volume_stats(mf.database_id, mf.file_id) vs --only return volumes where there is database file (data or log)
 where d.type_desc = 'log'
 order by mf.file_id asc
 
