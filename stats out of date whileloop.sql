@@ -69,14 +69,18 @@ BEGIN
 	select @runtsql = replace(@tsql, N'?', @dbname)
 
 	--generates scripts, does not actually perform the UPDATE STATISTICS. See below.
+	--Writes all the TSQL into a table variable which is displayed later
 	insert into @tsqllist (tsqltext) 
 	exec sp_executesql @runtsql
 	
 	set @x = @x + 1
 END
 
---select * from @tsqllist
+--Shows all stats in all databases that need to be updated
+select * from @tsqllist
 
+--OPTIONALLY - execute all UPDATE Stats
+/*
 declare @s int = 1, @scount int = null
 select @scount = max(id), @runtsql = null from @tsqllist l
 while (@s <= @scount)
@@ -84,17 +88,19 @@ BEGIN
 	
 	--actually executes the scripts.
 	select @runtsql = tsqltext from @tsqllist where id = @s
-	--uncomment to 
-	--exec sp_executesql @runtsql
-
+	exec sp_executesql @runtsql
 	
 	set @s = @s + 1
 	
 END
+*/
 
 
 
 
 /*
+
+USE [WideWorldImporters]; UPDATE STATISTICS [Sales].[InvoiceLines] [_WA_Sys_0000000D_1E6F845E] WITH RESAMPLE
+USE [WideWorldImporters]; UPDATE STATISTICS [Sales].[Invoices] [_WA_Sys_0000000A_7849DB76] WITH RESAMPLE
 
 */
