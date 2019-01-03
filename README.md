@@ -8,15 +8,21 @@ A loose assembly of files use for day-to-day administration, performance tuning,
 ### Prerequisites
 
 Many scripts have alternative versions for backwards compatibility with SQL Servers prior to SQL Server 2012, most scripts developed for SQL Server 2012 or higher, many with comments indicating features added in specific versions of SQL Server.
-Execution intended with SSMS/VSCode without SQLCMD mode enabled for most scripts.
+
+Execution intended with SSMS/VSCode without SQLCMD mode enabled for most scripts, unless otherwise noted.
+
+PowerShell should be supported for PowerShell 3+ unless otherwise noted.
 
 ## Contributing
 
-Suggestions/corrections welcome. Collaboration limited to internal SQLDBA team.
+Suggestions/corrections welcome. Collaboration limited to Sparkhound SQL DBA team.
 
-## Authors
+## Contributors
 
 * **William Assaf** - [williamadba](https://github.com/williamadba)
+* **Colby Loupe** - [cloupe](https://github.com/cloupe)
+* **David Nguyen** - [davidnguyen2889](https://github.com/davidnguyen2889)
+* **Bill Carter** - [wfc1973 ](https://github.com/wfc1973)
 
 ## Acknowledgments
 
