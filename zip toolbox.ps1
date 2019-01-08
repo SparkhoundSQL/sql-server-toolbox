@@ -7,29 +7,25 @@ get-childitem .\* -Recurse | Where-Object {$_.FullName -notlike '*\.git*' }  | W
 
 #Stable state checklist files only
 $stablestate  = (
-    '*Add Agent Failure Notifications job*',
     '*autogrow*',
     'Backup History*', 
-    'job - *',
-    '*Configuration Changes History*', 
-    '*Database Owner*', 
+    '*Configuration Changes History*',
+    '*CPU Utilization*', 
+    '*Database Owner*',
+    '*Database Mail Diag*', 
     '*Database Settings*', 
     '*Error Log.sql*', 
-    '*find memory mini dumps*', 
+    '*Find Memory Mini Dumps*', 
     '*Fix Orphaned SID*', 
     '*Gather Log Events*', 
-    '*Index Usage*', 
     '*Job Owners*', 
-    '*Missing Indexes*', 
-    '*multiserver*',
-    '*Public Permissions*', 
+    '*Public Permissions*',
+    '*Page Life Expectancy*', 
     '*Sharepoint databases*', 
     'Space in files*', 
-    '*Space in Log Files*', 
-    '*Stats out of Date*', 
+    '*Stats out of Date', 
     '*TempDB*', 
     '*VLFs*',
-    'volume stats*',
-    'sessions and requests.sql'   );
+    'Volume Stats*' );
 
 get-childitem .\* -Recurse -include $stablestate | Compress-Archive -DestinationPath .\toolbox-stablestate.zip -Force 
