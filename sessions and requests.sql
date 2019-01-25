@@ -1,4 +1,4 @@
---In Azure SQL, cannot run this in Master, must run in a user database.
+--!!! Note: Different version of this query for Azure SQL DB !!!
 
 	print 'start ' + cast(sysdatetime() as varchar(20))
 	declare @showallspids bit, @showinternalgroup bit 
@@ -22,7 +22,7 @@
 	,	statement_end_offset	int null
 	,	plan_handle	varbinary (64) null
 	,	database_id	smallint null
-	,	user_id	int null
+	,	[user_id]	int null
 	,	blocking_session_id	smallint null
 	,	wait_type	nvarchar (120) null
 	,	wait_time_s	int null
@@ -46,24 +46,22 @@
 
 
 	insert into #ExecRequests (session_id,request_id, request_start_time, login_time, login_name, client_interface_name, session_status, request_status, command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,database_id,user_id,blocking_session_id,wait_type,last_wait_type,wait_time_s,wait_resource,cpu_time_s,tot_time_s,reads,writes,logical_reads,[host_name], [program_name] ,	session_transaction_isolation_level ,	request_transaction_isolation_level ,	Governor_Group_Id
-	--, EndPointName, Protocol -- sql2k16+ only
+	, EndPointName, Protocol  -- sql2k16+ and patches of 14 and 12 only
 	)
-	select s.session_id, r.request_id, r.start_time, s.login_time, s.login_name, s.client_interface_name, s.status, r.status,command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,r.database_id,user_id,blocking_session_id,wait_type,r.last_wait_type, r.wait_time/1000.,r.wait_resource ,r.cpu_time/1000.,r.total_elapsed_time/1000.,r.reads,r.writes,r.logical_reads,s.[host_name], s.[program_name], s.transaction_isolation_level, r.transaction_isolation_level, s.group_id
-	--, EndPointName= e.name, Protocol = e.Protocol_Desc	 
-	from sys.dm_exec_sessions s 
-	left outer join sys.dm_exec_requests r on r.session_id = s.session_id
-	--left outer join sys.endpoints E ON E.endpoint_id = s.endpoint_id 
-	where 1=1
+	SELECT s.session_id, r.request_id, r.start_time, s.login_time, s.login_name, s.client_interface_name, s.status, r.status,command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,r.database_id,user_id,blocking_session_id,wait_type,r.last_wait_type, r.wait_time/1000.,r.wait_resource ,r.cpu_time/1000.,r.total_elapsed_time/1000.,r.reads,r.writes,r.logical_reads,s.[host_name], s.[program_name], s.transaction_isolation_level, r.transaction_isolation_level, s.group_id
+	, EndPointName= e.name, Protocol = e.Protocol_Desc	  -- sql2k16+ and patches of 14 and 12 only
+	FROM sys.dm_exec_sessions s 
+	LEFT OUTER JOIN sys.dm_exec_requests r on r.session_id = s.session_id
+	LEFT OUTER JOIN sys.endpoints E ON E.endpoint_id = s.endpoint_id  -- sql2k16+ and patches of 14 and 12 only
+	WHERE 1=1
 	and s.session_id >= 50 --retrieve only user spids
 	and s.session_id <> @@SPID --ignore myself
 	and		(@showallspids = 1 or r.session_id is not null) 
 	and		(@showinternalgroup = 1 or s.Group_Id > 1)
 	print 'insert done'
 
-	
-
-	update #ExecRequests 
-	set blocking_these = LEFT((select isnull(convert(varchar(5), er.session_id),'') + ', ' 
+	UPDATE #ExecRequests 
+	SET blocking_these = LEFT((select isnull(convert(varchar(5), er.session_id),'') + ', ' 
 							from #ExecRequests er
 							where er.blocking_session_id = isnull(#ExecRequests.session_id ,0)
 							and er.blocking_session_id <> 0
@@ -74,9 +72,9 @@
 
 	--Optional Insert statement for retaining this data. See toolbox\sessions and requests table.sql for destination.
 	--INSERT INTO dbalogging.dbo.[SessionsAndRequestsLog] 
-	select * from (
-		select		
-			timestamp =	getdate()
+	SELECT * FROM (
+		SELECT		
+		  timestamp =	sysdatetimeoffset()
 		, r.session_id	, r.host_name	, r.program_name
 		, r.session_status
 		, r.request_status
@@ -142,12 +140,10 @@
 		OUTER APPLY sys.dm_exec_query_plan (r.plan_handle) qp
 		OUTER APPLY sys.dm_exec_sql_text (r.sql_handle) est
 		LEFT OUTER JOIN sys.dm_exec_query_stats stat on stat.plan_handle = r.plan_handle
-		and r.statement_start_offset = stat.statement_start_offset  
-		and r.statement_end_offset = stat.statement_end_offset
-		LEFT OUTER JOIN sys.resource_governor_workload_groups  wg
-		on wg.group_id = r.Governor_Group_Id
-		LEFT OUTER JOIN sys.resource_governor_resource_pools wp
-		on wp.pool_id = wg.Pool_id
+													and r.statement_start_offset = stat.statement_start_offset  
+													and r.statement_end_offset = stat.statement_end_offset
+		LEFT OUTER JOIN sys.resource_governor_workload_groups  wg on wg.group_id = r.Governor_Group_Id
+		LEFT OUTER JOIN sys.resource_governor_resource_pools wp on wp.pool_id = wg.Pool_id
 		
 		LEFT OUTER JOIN (SELECT SU.session_id
 							, Outstanding_TempDB_Session_Internal_Alloc_pages = sum (SU.internal_objects_alloc_page_count) - sum (SU.internal_objects_dealloc_page_count)
@@ -160,12 +156,10 @@
 							where SU.session_id > 50    
 							GROUP BY SU.session_id) as tempdb
 		on tempdb.session_id = r.session_id	 
-
 		CROSS APPLY sys.dm_exec_input_buffer(r.session_id, r.request_id) AS ib   --SQL 2014 SP2+ only
-		
 	) a
-	order by len(blocking_these) - len(replace(blocking_these,',','')) desc, blocking_these desc, blocked_by desc, session_id
+	ORDER BY len(blocking_these) - len(replace(blocking_these,',','')) desc, blocking_these desc, blocked_by desc, session_id;
 
-	print 'done ' + cast(sysdatetime() as varchar(20))
+	PRINT 'done ' + cast(sysdatetime() as varchar(20))
 	go
-	drop table #ExecRequests  
+	DROP TABLE #ExecRequests  
