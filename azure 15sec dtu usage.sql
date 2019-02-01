@@ -23,7 +23,7 @@ select
 ,	'Log Write Utilization In % of Limit'	= rs.avg_log_write_percent
 ,	'Memory Usage In % of Limit'			= rs.avg_memory_usage_percent 
 ,	'In-Memory OLTP Storage in % of Limit'	= rs.xtp_storage_percent
-,	'Concurrent Requests in % of Limit'		= rs.max_worker_percent
+,	'Concurrent Worker Threads in % of Limit'		= rs.max_worker_percent
 ,	'Concurrent Sessions in % of Limit'		= rs.max_session_percent
 
 from 
