@@ -1,5 +1,8 @@
 --This script only works in SQL2008R2SP2+ or SQL2012SP1+
 
+--This generates an UPDATE STATISTICS script for all databases. Can be used in a maintenance plan (see bottom). Safe to execute.
+--Use toolbox\stats out of date.sql to examine a particular database.
+
 --TODO BEFORE EXECUTING: comment out three lines below in <SQL2014 because incremental stastics not supported.
 
 declare @tsql nvarchar(max) = 
@@ -21,7 +24,7 @@ declare @tsql nvarchar(max) =
                + QUOTENAME(STA.name) + N'' '' 
 			   + ''WITH RESAMPLE''
 			   + CASE WHEN 
---						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
+						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
 						MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN '' ON PARTITIONS ('' + cast(p.partition_number as varchar(5)) + '') '' ELSE '''' END
                
 			END
@@ -35,7 +38,7 @@ declare @tsql nvarchar(max) =
 			and (i.type_desc not like ''%columnstore%'')
 	     LEFT OUTER join sys.dm_db_partition_stats p 
 			on (
---			STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
+			STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
 			p.object_id = o.object_id  and 
 			i.index_id = p.index_id
 			)
@@ -71,7 +74,7 @@ BEGIN
 	--generates scripts, does not actually perform the UPDATE STATISTICS. See below.
 	--Writes all the TSQL into a table variable which is displayed later
 	insert into @tsqllist (tsqltext) 
-	exec sp_executesql @runtsql
+	exec sp_executesql @runtsql --safe, does not actually update stats
 	
 	set @x = @x + 1
 END
