@@ -5,7 +5,7 @@ select
 ,	[Column Name]	= c.name
 ,	[Total_rows]	= sum(ps.row_count) 
 --Review the distribution of the data in the table
-,	TSQL_Testing	= 'select [' + c.name + '], count(1) from ['+ s.name + '].[' + o.name+'] group by [' + c.name + ']' 
+,	[TSQL_Testing_Row_Distribution]	= 'select [' + c.name + '], count(1) from ['+ s.name + '].[' + o.name+'] group by [' + c.name + ']' 
 from 
 	sys.objects  o
 inner join 
@@ -24,15 +24,43 @@ WHERE
 	o.name <> 'dtproperties'
 and is_ms_shipped = 0
 and o.type = 'u'
-and (c.name like 'is%' or c.name like '%active%' or c.name like '%ignore%' 
-or c.name like '%current%' or c.name like '%archived%' or c.name like '%flag%' 
-or c.name like '%bit%' or t.name = 'bit' 
---Add any more naming conventions here
-)
+and (	c.name like 'is%' 
+	or	c.name like '%active%' 
+	or	c.name like '%ignore%' 
+	or	c.name like 'has%'
+	or	c.name like '%current%' 
+	or	c.name like '%archived%' 
+	or	c.name like '%flag%' 
+	or	c.name like '%bit%' 
+	or	t.name = 'bit' 
+	--Add any more known naming conventions here
+	)	
 group by c.name, s.name, o.name
 having sum(ps.row_count) > 100000
-order by rows desc
+order by [Total_rows] desc
 go
+
+--Existing filtered indexes
+SELECT 
+	[Database Name] = db_name()
+,	[Table Name]	= s.name + '.' + o.name
+,	[Index Name]	= i.name
+from 
+	sys.objects  o
+inner join 
+	sys.schemas s
+	on o.schema_id = s.schema_id
+inner join 
+	sys.indexes i
+	on i.object_id = o.object_id
+inner join 
+	sys.dm_db_partition_stats ps
+	on ps.object_id = o.object_id and ps.index_id = i.index_id
+WHERE
+	i.has_filter = 1
+ORDER BY
+	s.name, o.name, i.name
+
 
 /*
 --Potential Filtered index opportunities
