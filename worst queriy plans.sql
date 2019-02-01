@@ -1,4 +1,5 @@
---Worst queries
+--Worst query plans
+--To find the worst queries and their plan(s), use Query Store (SQL 2016+)
 --Table to capture this data at bottom
 
 --INSERT INTO dbo.worstqueries
