@@ -1,6 +1,7 @@
---This script only works in SQL2008R2SP2+ or SQL2012SP1+
+--This script only works in SQL2008R2SP2+ or SQL2012SP1+. 
 
---This generates an UPDATE STATISTICS script for all databases. Can be used in a maintenance plan (see bottom). Safe to execute.
+--This generates an UPDATE STATISTICS script for all databases. Can be used in a maintenance plan (see bottom). Safe to execute. 
+--This version does not work in Azure SQL DB. Instead, see toolbox\stats out of date.sql.
 --Use toolbox\stats out of date.sql to examine a particular database.
 
 --TODO BEFORE EXECUTING: comment out three lines below in <SQL2014 because incremental stastics not supported.

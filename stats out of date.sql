@@ -1,4 +1,4 @@
---This script only works in SQL2008R2SP2+ or SQL2012SP1+
+--This script only works in SQL2008R2SP2+ or SQL2012SP1+. Works in Azure SQL DB.
 
 --This only checks current database context.
 --Use toolbox\stats out of date whileloop.sql to scan all databases.
