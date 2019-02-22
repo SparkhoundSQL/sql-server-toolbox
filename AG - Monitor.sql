@@ -166,6 +166,21 @@ select db = db_name(database_id)
 ,	modification_time
 from sys.dm_hadr_auto_page_repair order by modification_time desc
 
+--Replica status (one row per replica when run on the primary)
+select 
+	ag.name,
+	rcs.replica_server_name,
+	rs.last_connect_error_number, rs.last_connect_error_description, rs.last_connect_error_timestamp,
+	rs.operational_state_desc,
+	rs.recovery_health_desc,
+	rs.connected_state_desc,
+	rs.role_desc,
+	rs.synchronization_health_desc
+from sys.dm_hadr_availability_replica_states rs --https://docs.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-hadr-availability-replica-states-transact-sql?view=sql-server-2017
+inner join sys.dm_hadr_availability_replica_cluster_states rcs
+on rs.replica_id = rcs.replica_id
+inner join sys.availability_groups ag 
+on ag.group_id = rcs.group_id
 
 --https://msdn.microsoft.com/en-us/library/ff877972(v=sql.110).aspx
 --https://msdn.microsoft.com/en-us/library/dn135338(v=sql.110).aspx
