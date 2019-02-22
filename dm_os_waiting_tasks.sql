@@ -30,6 +30,7 @@ and wt.wait_type <> 'SQLTRACE_BUFFER_FLUSH' -- system trace, not a cause for con
 and wt.wait_type not in ('REQUEST_FOR_DEADLOCK_SEARCH', 'ONDEMAND_TASK_QUEUE','BROKER_TRANSMITTER','BROKER_EVENTHANDLER','LOGMGR_QUEUE','CHECKPOINT_QUEUE','BROKER_TO_FLUSH','DISPATCHER_QUEUE_SEMAPHORE') -- background task that handles requests, not a cause for concern
 and wt.wait_type not in ('KSOURCE_WAKEUP','XE_DISPATCHER_WAIT','FT_IFTS_SCHEDULER_IDLE_WAIT','FT_IFTSHC_MUTEX','XE_TIMER_EVENT','FSAGENT','CLR_AUTO_EVENT') -- other waits that can be safely ignored
 and (st.text is null or ltrim(st.text) not like 'SELECT%wt.wait_type%')
+and wt.wait_type not in ('QDS_ASYNC_QUEUE','QDS_SHUTDOWN_QUEUE') --Query Store, can ignore
 --and st.text like '%billing_report%'
 ORDER BY wt.wait_duration_ms desc
 go

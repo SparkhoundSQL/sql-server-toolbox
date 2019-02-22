@@ -12,6 +12,7 @@ and wt.wait_type not in ('HADR_FILESTREAM_IOMGR_IOCOMPLETION','QDS_SHUTDOWN_QUEU
 and wt.wait_type <> 'SQLTRACE_BUFFER_FLUSH' -- system trace, not a cause for concern
 and wt.wait_type not in ('ONDEMAND_TASK_QUEUE','BROKER_TRANSMITTER','BROKER_EVENTHANDLER','LOGMGR_QUEUE','CHECKPOINT_QUEUE','BROKER_TO_FLUSH','DISPATCHER_QUEUE_SEMAPHORE') -- background task that handles requests, not a cause for concern
 and wt.wait_type not in ('KSOURCE_WAKEUP','XE_DISPATCHER_WAIT','FT_IFTS_SCHEDULER_IDLE_WAIT','FT_IFTSHC_MUTEX','XE_TIMER_EVENT') -- other waits that can be safely ignored
+and wt.wait_type not in ('QDS_ASYNC_QUEUE','QDS_SHUTDOWN_QUEUE')  --Query Store, can ignore
 order by Pct desc
 
 /*
