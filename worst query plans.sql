@@ -8,7 +8,7 @@ select top 15
 , Average_cpu		=	convert(decimal(19,2), tot_cpu_ms)/convert(decimal(19,2),usecounts)
 , Average_Duration	=	convert(decimal(19,2),tot_duration_ms)/convert(decimal(19,2),usecounts)
 , WorstQueriesObservedWhen		=	sysdatetime()
-, DeleteQueryPlan	= 'DBCC FREEPROCCACHE('+convert(varchar(64),PlanHandle,1)+')'  --delete just this plan
+, DeleteQueryPlan	= 'DBCC FREEPROCCACHE('+convert(varchar(512),PlanHandle,1)+')'  --delete just this plan
  from 
 (
 	SELECT 
@@ -120,3 +120,4 @@ CREATE TABLE [dbo].[worstqueries](
 GO
 
 */
+
