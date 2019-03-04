@@ -52,6 +52,7 @@ and (
 	LogMessageText like '%error%'
 or	LogMessageText like '%failure%'
 or	LogMessageText like '%failed%'
+or	LogMessageText like '%corrupt%'
 )
 and LogMessageText not like '%without errors%'
 and LogMessageText not like '%informational%'
@@ -65,6 +66,7 @@ and (
 	LogMessageText like '%error%'
 or	LogMessageText like '%failure%'
 or	LogMessageText like '%failed%'
+or	LogMessageText like '%corrupt%'
 )
 and LogMessageText not like '%without errors%'
 and LogMessageText not like '%informational%'
