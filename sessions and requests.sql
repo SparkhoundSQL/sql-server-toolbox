@@ -23,32 +23,33 @@
 	,	plan_handle	varbinary (64) null
 	,	database_id	smallint null
 	,	[user_id]	int null
+	,	blocking_these varchar(1000) NULL
 	,	blocking_session_id	smallint null
 	,	wait_type	nvarchar (120) null
-	,	wait_time_s	int null
+	,	wait_time_s	decimal(19,2) null
 	,	wait_resource nvarchar(120) null
 	,	last_wait_type nvarchar(120) null
-	,	cpu_time_s	int null
-	,	tot_time_s	int null
+	,	cpu_time_s	decimal(19,2) null
+	,	tot_time_s	decimal(19,2) null
 	,	reads	bigint null
 	,	writes	bigint null
 	,	logical_reads	bigint null
+	,	percent_complete decimal(9,4) null
+	,	estimated_completion_time bigint null
+	,	total_elapsed_time bigint  null
 	,	[host_name] nvarchar(256) null
 	,	[program_name] nvarchar(256) null
 	,	Governor_Group_Id int null
-	,	blocking_these varchar(1000) NULL
-	,	percent_complete int null --backup and restore events only
 	,	session_transaction_isolation_level varchar(20) null
 	,	request_transaction_isolation_level varchar(20) null
 	,	EndPointName sysname null
 	,	Protocol nvarchar(120) null
 	)
 
-
-	insert into #ExecRequests (session_id,request_id, request_start_time, login_time, login_name, client_interface_name, session_status, request_status, command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,database_id,user_id,blocking_session_id,wait_type,last_wait_type,wait_time_s,wait_resource,cpu_time_s,tot_time_s,reads,writes,logical_reads,[host_name], [program_name] ,	session_transaction_isolation_level ,	request_transaction_isolation_level ,	Governor_Group_Id
+	insert into #ExecRequests (session_id,request_id, request_start_time, login_time, login_name, client_interface_name, session_status, request_status, command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,database_id,user_id,blocking_session_id,wait_type,last_wait_type,wait_time_s,wait_resource,cpu_time_s,tot_time_s,reads,writes,logical_reads	,percent_complete,estimated_completion_time	,[host_name], [program_name] ,	session_transaction_isolation_level ,	request_transaction_isolation_level ,	Governor_Group_Id
 	, EndPointName, Protocol  -- sql2k16+ and patches of 14 and 12 only
 	)
-	SELECT s.session_id, r.request_id, r.start_time, s.login_time, s.login_name, s.client_interface_name, s.status, r.status,command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,r.database_id,user_id,blocking_session_id,wait_type,r.last_wait_type, r.wait_time/1000.,r.wait_resource ,r.cpu_time/1000.,r.total_elapsed_time/1000.,r.reads,r.writes,r.logical_reads,s.[host_name], s.[program_name], s.transaction_isolation_level, r.transaction_isolation_level, s.group_id
+	SELECT s.session_id, r.request_id, r.start_time, s.login_time, s.login_name, s.client_interface_name, s.status, r.status,command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,r.database_id,user_id,blocking_session_id,wait_type,r.last_wait_type, r.wait_time/1000.,r.wait_resource ,r.cpu_time/1000.,r.total_elapsed_time/1000.,r.reads,r.writes,r.logical_reads,percent_complete,estimated_completion_time	,s.[host_name], s.[program_name], s.transaction_isolation_level, r.transaction_isolation_level, s.group_id
 	, EndPointName= e.name, Protocol = e.Protocol_Desc	  -- sql2k16+ and patches of 14 and 12 only
 	FROM sys.dm_exec_sessions s 
 	LEFT OUTER JOIN sys.dm_exec_requests r on r.session_id = s.session_id
@@ -72,7 +73,8 @@
 
 	--Optional Insert statement for retaining this data. See toolbox\sessions and requests table.sql for destination.
 	--INSERT INTO dbalogging.dbo.[SessionsAndRequestsLog] 
-	SELECT * FROM (
+	SELECT * 
+		FROM (
 		SELECT		
 		  timestamp =	sysdatetimeoffset()
 		, r.session_id	, r.host_name	, r.program_name
@@ -95,6 +97,13 @@
 		, r.cpu_time_s --cpu_time is not accurate prior to SQL Server 2012 SP2.  http://blogs.msdn.com/b/psssql/archive/2014/11/11/how-come-sys-dm-exec-requests-cpu-time-never-moves.aspx
 		, r.reads, r.writes, r.logical_reads
 		--, [fulltext]	=	est.[text]
+		, r.percent_complete --only available for certain operations
+		, estimated_remaining_time_HHMMSS = 
+				CASE WHEN r.estimated_completion_time < 36000000 THEN '0' ELSE '' END
+				+ RTRIM(r.estimated_completion_time/1000/3600)
+				+ ':' + RIGHT('0' + RTRIM((r.estimated_completion_time/1000)%3600/60), 2)
+				+ ':' + RIGHT('0' + RTRIM((r.estimated_completion_time/1000)%60), 2)
+
 		, offsettext	=	CASE	WHEN r.statement_start_offset = 0 and r.statement_end_offset= 0 THEN left(est.text, 4000)
 									ELSE	SUBSTRING (		est.[text]
 													,	r.statement_start_offset/2 + 1, 
@@ -122,7 +131,14 @@
 				when 4 then 'Serializable'
 				when 5 then 'Snapshot' end 
 		, p.plan_handle
-		, stat.execution_count, total_worker_time_s = stat.total_worker_time/1000./1000., last_worker_time_s = stat.last_worker_time/1000./1000., total_elapsed_time_s = stat.total_elapsed_time/1000./1000., last_elapsed_time_s = stat.last_elapsed_time/1000./1000., stat.total_physical_reads, stat.total_logical_writes, stat.total_logical_reads
+		, plan_execution_count		= stat.execution_count
+		, plan_total_worker_time_s	= stat.total_worker_time/1000./1000.
+		, plan_last_worker_time_s	= stat.last_worker_time/1000./1000.
+		, plan_total_elapsed_time_s = stat.total_elapsed_time/1000./1000.
+		, plan_last_elapsed_time_s	= stat.last_elapsed_time/1000./1000.
+		, plan_total_physical_reads = stat.total_physical_reads
+		, plan_total_logical_writes = stat.total_logical_writes
+		, plan_total_logical_reads	= stat.total_logical_reads
 		, Governor_Group_Name	=	wg.name
 		, Governor_Group_ID		=	r.Governor_Group_Id
 		, Governor_Pool_Name	=	wp.name 
