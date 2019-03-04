@@ -2,11 +2,13 @@
 --See also Security Script - database.sql
 --This script works SQL 2012+ (thus the title)
 
+--enable "Retain CR/LF on copy or save" in Options, Query Results, SQL Server, Results to Grid
+
 SELECT @@SERVERNAME
 
 --script out SQL logins to create/transfer
 --http://support.microsoft.com/kb/918992
--- or see bottom
+-- or see bottom of this script
 EXEC sp_help_revlogin
 GO
 
@@ -26,12 +28,15 @@ order by name, type_desc
 USE [master]
 GO
 
---compare sql logins, use to drop only. Can only get Password hash from sp_help_revlogin.
+--compare sql logins, use to drop only. Can only get Password hash from sp_help_revlogin, so use that for migrations.
 select 
-	sid, QUOTENAME(name) as sql_login_name
+	QUOTENAME(name) as sql_login_name
 ,	CreateTSQL_Source = 'CREATE LOGIN ['+ name +'] WITH DEFAULT_DATABASE=['+default_database_name+'], DEFAULT_LANGUAGE=['+default_language_name+'] 
 	, CHECK_EXPIRATION=' + CASE is_expiration_checked WHEN 0 THEN 'OFF' ELSE 'ON' END + '
-	, CHECK_POLICY= ' + CASE is_policy_checked WHEN 0 THEN 'OFF' ELSE 'ON' END + ';' 
+	, CHECK_POLICY= ' + CASE is_policy_checked WHEN 0 THEN 'OFF' ELSE 'ON' END + '
+	 WITH 
+	 --PASSWORD = Must use sp_help_revlogin for PW!,
+	 SID = ', sid 
 ,	DropTSQL_Source = 'DROP LOGIN ['+ name +']' 
 ,	'Need sp_help_revlogin for PW'
 from sys.sql_logins
@@ -40,6 +45,8 @@ and name not in ('dbo', 'sa', 'public')
 and is_disabled = 0
 order by sid, sql_login_name
 GO
+
+
 
 --Server level roles
 SELECT	DISTINCT
