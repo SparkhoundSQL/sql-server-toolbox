@@ -13,6 +13,7 @@
 
 --#Optional TODO's
 --Change name in ALTER ... BULK_LOGGED below if desired to use this. Change name in ALTER ... FULL near end if desired to use this. Commented out by default because this isn't feasible in many situations. 
+--Enable @CompressWhenPossible to start enabling data_compression = PAGE everywhere. Not recommended without testing.
 
 GO
 DECLARE @TestMode		bit
