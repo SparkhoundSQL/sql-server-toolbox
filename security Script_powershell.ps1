@@ -11,6 +11,7 @@
         6. Login attributes
     - Permissions to run the script:
         - Requires PowerShell Remoting enabled on host
+	- Local admin should be sufficient
         - Requires being a sysadmin on both Source and Destination SQL Servers
     
     NOTE: Preferably run after databases are migrated; No backwards compatability; DO NOT run the whole script at once, follow the steps.
@@ -19,7 +20,7 @@
 
 
 #1. Installs DBAtools.io gallery
-Install-Modul dbatools
+Install-Module dbatools
 
 
 #2. Change SQLSourceInstance to Source SQL Server name that logins will be migrated from and SQLDestinationInstance to Destination SQL Server name that logins will be migrated to.
