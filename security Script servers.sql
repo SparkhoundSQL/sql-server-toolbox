@@ -38,14 +38,12 @@ select
 	 --PASSWORD = Must use sp_help_revlogin for PW!,
 	 SID = ', sid 
 ,	DropTSQL_Source = 'DROP LOGIN ['+ name +']' 
-,	'Need sp_help_revlogin for PW'
 from sys.sql_logins
 where type = ('S')
 and name not in ('dbo', 'sa', 'public')
 and is_disabled = 0
 order by sid, sql_login_name
 GO
-
 
 
 --Server level roles
