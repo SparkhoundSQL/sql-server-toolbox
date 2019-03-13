@@ -10,7 +10,7 @@ SELECT m.send_request_date, m.recipients, m.copy_recipients, m.blind_copy_recipi
 FROM msdb.dbo.sysmail_allitems m
 LEFT OUTER JOIN msdb.dbo.sysmail_account a
 	ON m.sent_account_id = a.account_id
-INNER JOIN msdb.dbo.sysmail_event_log AS l  
+LEFT OUTER JOIN msdb.dbo.sysmail_event_log AS l  
     ON m.mailitem_id = l.mailitem_id  
 WHERE	1=1
 AND     m.send_request_date > dateadd(day, -45, sysdatetime()) -- Only show recent day(s)
