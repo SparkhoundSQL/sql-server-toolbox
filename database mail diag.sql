@@ -5,15 +5,12 @@ GO
 
 --Find recent unsent emails, hopefully there are none
 SELECT m.send_request_date, m.recipients, m.copy_recipients, m.blind_copy_recipients
-, m.[subject], sent_account = a.name, m.send_request_user, m.sent_status
+, m.[subject], m.send_request_user, m.sent_status
 , Error_Description = l.description 
 FROM msdb.dbo.sysmail_allitems m
-LEFT OUTER JOIN msdb.dbo.sysmail_account a
-	ON m.sent_account_id = a.account_id
 INNER JOIN msdb.dbo.sysmail_event_log AS l  
     ON m.mailitem_id = l.mailitem_id  
-WHERE	1=1
-AND     m.send_request_date > dateadd(day, -45, sysdatetime()) -- Only show recent day(s)
+WHERE	m.send_request_date > dateadd(day, -45, sysdatetime()) -- Only show recent day(s)
 AND		m.sent_status <> 'sent' -- Possible values are sent (successful), unsent (in process), retrying (failed but retrying), failed (no longer retrying)
 ORDER BY m.send_request_date DESC;
 GO
