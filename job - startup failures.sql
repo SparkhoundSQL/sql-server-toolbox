@@ -1,3 +1,4 @@
+--***PROTOTYPE***
 --Intention is to catch only severe errors and startup failures
 --Specifically because before Service Broker starts, some error Alerts may not send emails.
 
@@ -5,6 +6,15 @@
 
 USE [msdb]
 GO
+USE [msdb]
+GO
+declare @startup_job_id uniqueidentifier
+select @startup_job_id = job_id from  msdb.dbo.sysjobs where name = 'Startup error check'
+
+IF @startup_job_id is not null
+EXEC msdb.dbo.sp_delete_job @job_id=@startup_job_id, @delete_unused_schedule=1
+GO
+
 DECLARE @jobId BINARY(16)
 EXEC  msdb.dbo.sp_add_job @job_name=N'Startup error check', 
 		@enabled=1, 
@@ -107,6 +117,8 @@ and LogMessageText not like ''Error: 3041, Severity: 16, State: 1.''
 
 and LogMessageText not like ''Setting database option ANSI_%''
 
+and LogMessageText not like ''%Wait a few minutes%''
+
 )
 order by logdate
 
@@ -117,9 +129,14 @@ INSERT INTO @readerrorlog_found (LogDate, LogProcessInfo, LogMessageText)
 select sysdatetime(), NULL, ''Database name '' + d.name + ''is in SUSPECT mode!''
 from sys.databases d where STATE = 4;
 
+declare @subject nvarchar(100) = ''SQL Server instance Startup Report''
+
 IF NOT EXISTS  (Select * from @readerrorlog_found) 
 INSERT INTO @readerrorlog_found (LogDate, LogProcessInfo, LogMessageText)
 VALUES (sysdatetime(), NULL, ''No listed startup errors found.'');
+ELSE 
+set @subject = ''EMERGENCY '' + @subject
+
 
 declare @body nvarchar(4000) = ''SQL Server instance startup detected '' + @@SERVERNAME
 select @body = @body + ''
@@ -130,7 +147,8 @@ select 	@body = @body + ''
 <td>'' + LogMessageText+ ''</td></tr>''
 --, *
 from @readerrorlog_found order by logdate asc;
-select @body = @body + ''</table>''
+select @body = @body + ''</table>
+''
 
 select @body = LEFT(@body, 4000) --Safety
 
@@ -138,11 +156,13 @@ select @body = LEFT(@body, 4000) --Safety
 exec msdb.dbo.sp_send_dbmail 
 	@profile_name = ''sh-tenroxsql''  --TODO: must configure this server-specific
 , @recipients = ''william.assaf@sparkhound.com'' --TODO: Must configure this for the sql.alerts@sparkhound.com or internal distribution group
-, @subject = ''SQL Server instance Startup Report'', @body = @body, @exclude_query_output = 0
+, @subject = @subject
+, @body = @body, @exclude_query_output = 0
 , @body_format =''html''', 
 		@database_name=N'master', 
 		@flags=4
 GO
+
 USE [msdb]
 GO
 EXEC msdb.dbo.sp_update_job @job_name=N'Startup error check', 
