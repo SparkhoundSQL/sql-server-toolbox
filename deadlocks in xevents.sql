@@ -2,13 +2,13 @@
 --updated 20171003 WDA
 
 
-WITH cteDeadlocks ([Deadlock_XML]) AS (
+WITH cteDeadLocks ([Deadlock_XML]) AS (
   --Query RingBufferTarget
   SELECT [Deadlock_XML] = CAST(target_data AS XML) 
   FROM sys.dm_xe_sessions AS xs
   INNER JOIN sys.dm_xe_session_targets AS xst 
-  ON xs.address = xst.event_session_address
-  WHERE xs.NAME = 'system_health'
+  ON xs.[address] = xst.event_session_address
+  WHERE xs.[name] = 'system_health'
   AND xst.target_name = 'ring_buffer'
  )
 SELECT 
