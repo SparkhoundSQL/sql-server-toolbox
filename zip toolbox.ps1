@@ -1,5 +1,5 @@
-#There is a Windows Scheduled task on my machine that runs
-#PowerShell -File "E:\OneDrive\toolbox\zip toolbox.ps1"
+#There is a Windows Scheduled task on Windows that runs
+#PowerShell -File "E:\whatever path\toolbox\zip toolbox.ps1"
 
 #Full toolbox
 cd E:\OneDrive\toolbox
