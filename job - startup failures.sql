@@ -1,11 +1,24 @@
 --***PROTOTYPE***
 --Intention is to catch only severe errors and startup failures
---Specifically because before Service Broker starts, some error Alerts may not send emails.
+--Specifically because before Service Broker starts, some error Alerts may not send emails. This script waits one minute, checks log, sends email regardless.
 
---Check TODO's for mail profile and recipient
+--Find two TODO's for changing the name of the DBAHound db local to the server
+--Find two TODO's for mail profile and recipient near bottom of job
 
-USE [msdb]
+USE DBALogging   --TODO verify this database name
 GO
+--DROP table dbo.startup_readerrorlog_found 
+
+IF NOT EXISTS (select * from sys.objects where name = 'startup_readerrorlog_found') 
+CREATE table dbo.startup_readerrorlog_found 
+( ID int not null IDENTITY(1,1) CONSTRAINT PK_startup_readerrorlog_found PRIMARY KEY
+, LogDate datetime2(2) not null  
+, LogProcessInfo nvarchar(255)  null 
+, [LogMessageText] nvarchar(4000) not null 
+, When_Inserted datetime2(2) not null CONSTRAINT DF_startup_readerrorlog_found_When_Inserted DEFAULT (sysdatetime())
+, When_Startup_Detected datetime2(2) not null 
+)
+
 USE [msdb]
 GO
 declare @startup_job_id uniqueidentifier
@@ -40,6 +53,9 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Startup error check', @step_name=N'chec
 		@os_run_priority=0, @subsystem=N'TSQL', 
 		@command=N'--Intention is to catch only severe errors and startup failures
 --Specifically because before Service Broker starts, some error Alerts may not send emails.
+
+declare @When_Startup_Detected datetime2(2)
+select @When_Startup_Detected = sysdatetime()
 
 WAITFOR DELAY ''00:01'';  --wait one minute
 
@@ -118,11 +134,23 @@ and LogMessageText not like ''Error: 3041, Severity: 16, State: 1.''
 and LogMessageText not like ''Setting database option ANSI_%''
 
 and LogMessageText not like ''%Wait a few minutes%''
+and LogMessageText not like ''Error: 17187, Severity: 16%''
+
+and LogMessageText not like ''The login packet used to open the connection is structurally invalid%''
+and LogMessageText not like ''Error: 17832, Severity: 20%''
+
+and LogMessageText not like ''Length specified in network packet payload did not match number of bytes read%''
+and LogMessageText not like ''Error: 17836, Severity: 20%.''
+
+and LogMessageText not like ''Could not connect because the maximum number of % dedicated administrator connections already exists%''
+and LogMessageText not like ''Error: 17810, Severity: 20%''
+
+and LogMessageText not like ''READ UNCOMMITTED%''
+and LogMessageText not like ''Error: 7886, Severity: 20%''
 
 )
 order by logdate
 
---select * from @readerrorlog_found order by logdate asc
 
 IF EXISTS  (Select * from sys.databases d where STATE = 4)
 INSERT INTO @readerrorlog_found (LogDate, LogProcessInfo, LogMessageText)
@@ -132,10 +160,10 @@ from sys.databases d where STATE = 4;
 declare @subject nvarchar(100) = ''SQL Server instance Startup Report''
 
 IF NOT EXISTS  (Select * from @readerrorlog_found) 
-INSERT INTO @readerrorlog_found (LogDate, LogProcessInfo, LogMessageText)
-VALUES (sysdatetime(), NULL, ''No listed startup errors found.'');
+	INSERT INTO @readerrorlog_found (LogDate, LogProcessInfo, LogMessageText)
+	VALUES (sysdatetime(), NULL, ''No listed startup errors found.'');
 ELSE 
-set @subject = ''EMERGENCY '' + @subject
+	set @subject = ''EMERGENCY '' + @subject;
 
 
 declare @body nvarchar(4000) = ''SQL Server instance startup detected '' + @@SERVERNAME
@@ -152,19 +180,45 @@ select @body = @body + ''</table>
 
 select @body = LEFT(@body, 4000) --Safety
 
---Send email
-exec msdb.dbo.sp_send_dbmail 
-	@profile_name = ''sh-tenroxsql''  --TODO: must configure this server-specific
-, @recipients = ''william.assaf@sparkhound.com'' --TODO: Must configure this for the sql.alerts@sparkhound.com or internal distribution group
-, @subject = @subject
-, @body = @body, @exclude_query_output = 0
-, @body_format =''html''', 
-		@database_name=N'master', 
+BEGIN TRY
+
+INSERT INTO dbo.startup_readerrorlog_found ( LogDate , LogProcessInfo , [LogMessageText], When_Startup_Detected )
+Select LogDate, LogProcessInfo , [LogMessageText], @When_Startup_Detected 
+from @readerrorlog_found  order by logdate asc;
+
+END TRY 
+BEGIN CATCH
+
+	INSERT INTO dbo.startup_readerrorlog_found ( LogDate , LogProcessInfo , [LogMessageText], When_Startup_Detected )
+	VALUES (sysdatetime(), ''Error writing log entries to table!'', ''Error number '' + str(ERROR_NUMBER()) + '' Error Message: ''+ ERROR_MESSAGE(), @When_Startup_Detected);
+
+	--THROW;
+
+END CATCH;
+
+BEGIN TRY
+
+	--Send email
+	exec msdb.dbo.sp_send_dbmail 
+		@profile_name = ''sh-tenroxsql''  --TODO: must configure this server-specific, use the Dbmail profile that Agent is configured to use. (We could do a xp_instance_regread search here but regkey is too variable from server to server)
+	, @recipients = ''sql.alerts@sparkhound.com'' --TODO: Must configure this for the sql.alerts@sparkhound.com or internal distribution group
+	, @subject = @subject
+	, @body = @body, @exclude_query_output = 0
+	, @body_format =''html''
+
+END TRY 
+BEGIN CATCH
+
+	INSERT INTO dbo.startup_readerrorlog_found ( LogDate , LogProcessInfo , [LogMessageText], When_Startup_Detected )
+	VALUES (sysdatetime(), ''Sending email failed!'', ''Error number '' + str(ERROR_NUMBER()) + '' Error Message: ''+ ERROR_MESSAGE(), @When_Startup_Detected);
+
+	THROW;
+
+END CATCH;', 
+		@database_name=N'DBALogging', --TODO verify this database name
 		@flags=4
 GO
 
-USE [msdb]
-GO
 EXEC msdb.dbo.sp_update_job @job_name=N'Startup error check', 
 		@enabled=1, 
 		@start_step_id=1, 
@@ -178,8 +232,7 @@ EXEC msdb.dbo.sp_update_job @job_name=N'Startup error check',
 		@notify_email_operator_name=N'', 
 		@notify_page_operator_name=N''
 GO
-USE [msdb]
-GO
+--Configure to run at SQL service startup
 DECLARE @schedule_id int
 EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Startup error check', @name=N'sql startup', 
 		@enabled=1, 
@@ -194,7 +247,5 @@ EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Startup error check', @name=N'sql s
 		@active_start_time=0, 
 		@active_end_time=235959, @schedule_id = @schedule_id OUTPUT
 select @schedule_id
-GO
-USE [msdb]
 GO
 
