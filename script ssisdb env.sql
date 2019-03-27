@@ -66,10 +66,9 @@ PRINT ''
  
 WHILE (@@FETCH_STATUS = 0)
     BEGIN
-        PRINT 'SET @var = N''' + CONVERT(nvarchar(max), @value) + ''''
+        PRINT 'SET @var = N''' + CONVERT(nvarchar(max), ISNULL(@value,N'Sensitive, must provide!!!')) + ''''
  
-        PRINT 'IF NOT EXISTS (SELECT 1 FROM [SSISDB].[catalog].[environment_variables] WHERE environment_id = @environment_id AND name = N''' 
-		PRINT + @name + ''')'
+        PRINT 'IF NOT EXISTS (SELECT 1 FROM [SSISDB].[catalog].[environment_variables] WHERE environment_id = @environment_id AND name = N''' + @name + ''')'
         PRINT  ' EXEC [SSISDB].[catalog].[create_environment_variable] @variable_name=N''' + @name + ''', @sensitive=' + CONVERT(varchar(2), @sensitive) + ', @description=N''' + @description + ''', @environment_name=N''' + @environment_name_new + ''', @folder_name=N''' + @folder_name + ''', @value=@var, @data_type=N''' + @type + ''''
  
         PRINT ''
