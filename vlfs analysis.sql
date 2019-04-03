@@ -4,9 +4,11 @@
 --If no TSQL scripts generated in the Messages tab, then no log files found with need for VLF maint.
 
 --shows the number of VLF's. CreateLSN=0 for the original created files.
---filesize /1024, *8 to get MB 
+--mf.size /1024, *8 to get MB 
+--LogInfo filesize is in bytes, so /1024./1024. to get MB
 --Ideally 1 VLF per 500MB. 
 --IF log >8 GB, Recreate log in 8000 MB increments.
+--A single VLF larger than 4GB could be a problem with backup compression - https://techcommunity.microsoft.com/t5/SQL-Server/Backup-Compression-for-TDE-enabled-Databases-Important-fixes-in/ba-p/385593?advanced=false&collapse_discussion=true&q=MAXTRANSFERSIZE&search_type=thread
 
 --Shrink/regrow step only works for databases with one log file. Why do you have more than one log file anyway? Stop. Think. Ask yourself.
 
@@ -22,30 +24,28 @@ SET NOCOUNT ON
 Create Table #Log(
 	RecoveryUnitId bigint  null,--SQL 2012 and above only, comment out for <=SQL 2008
     FileID      int not null
-  , FileSize_KB    bigint not null
-  , StartOffset bigint not null
+  , FileSize_b    bigint not null
+  , StartOff	bigint not null
   , FSeqNo      bigint not null
   , [Status]    int not null
   , Parity      bigint not null
   , CreateLSN   decimal(30,0) not null
 );
- 
+ DBCC LogInfo('w') with no_infomsgs
 Exec sp_MSforeachdb N'Use [?]; 
 Insert Into #Log  
 Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
-declare @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @T nvarchar(4000) 
+declare @Co bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @T nvarchar(4000), @Max_MB bigint
 select @Log_MB =sum(convert(bigint, mf.size))*8/1024 FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
-select @VLFCo=Count_big(StartOffset) ,	@Avg_MB=@Log_MB / Count_big(StartOffset) from #Log
-if ((@Avg_MB <= 64 OR @Avg_MB > 4000) AND @Log_MB > 1024) AND (@Log_MB<8000) AND (@VLFCo>100) AND EXISTS 
+select @Co=Count_big(StartOff) ,	@Avg_MB=@Log_MB / Count_big(StartOff), @Max_MB = MAX(FileSize_b/1048576.) from #Log
+if (((@Avg_MB <= 64 OR @Avg_MB > 4000) AND @Log_MB > 1024) OR (@Log_MB<8000)) AND EXISTS 
 (select 1 FROM sys.databases WHERE is_read_only = 0 and state=0 and db_id()=database_id)
 BEGIN
-		select DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
-SELECT @T= ''
-USE [''+d.name+'']
-GO
+		select DBName= db_name(), Co=@Co, Size_MB=@Log_MB, Avg_MB=@Avg_MB
+SELECT @T= ''USE [''+d.name+''];
 CHECKPOINT
 GO
-DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY);
+DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY)
 GO
 USE [master]
 --Original Size ''+convert(varchar(1000), @Log_MB) +'' MB
@@ -56,52 +56,53 @@ FROM sys.databases d inner join sys.master_files mf on d.database_id=mf.database
 IF @T IS NOT NULL BEGIN
 	set @T=@T+''
 ''
-	IF @VLFCo  > (@Log_MB / 100)
+	IF @Co  > (@Log_MB / 100)
 	SELECT DB_NAME()+'' log file too many VLFs.''
 	IF @Avg_MB > 1024 
 	SELECT DB_NAME()+'' log file VLFs too large.''
 	IF (@Avg_MB < 64 AND @Log_MB > 1024)
 	SELECT DB_NAME()+'' log file VLFs too small.''
+	IF (@Max_MB >= 4096) 
+	SELECT DB_NAME()+'' single log file VLF >4000MB''
+	
 	print  @T
 END	
 END
 Truncate Table #Log;'
---Had to split this out because of sp_MSforeachdb char limits
+
+
+--Had to split this out because of sp_MSforeachdb char limits.
 Exec sp_MSforeachdb N'Use [?]; 
 Insert Into #Log  
 Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
-DECLARE @VLFCo bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @Log_curr bigint, @T nvarchar(4000), @LNeed int, @Accu bigint
+DECLARE @Co bigint, @Avg_MB decimal(19,2), @LCnt int, @Log_MB decimal(19,2) , @Log_curr bigint, @T nvarchar(4000), @LNeed int, @Ac bigint, @Max_MB bigint
 SELECT @Log_MB=sum(convert(bigint, mf.size))*8./1024. FROM sys.master_files mf where type=1 and state=0 and db_id()=mf.database_id
-SELECT @VLFCo=Count_big(StartOffset) , @Avg_MB=@Log_MB / Count_big(StartOffset) from #Log
-
-IF ( (@Avg_MB>1024) OR (@Avg_MB<64 AND @Log_MB > 1024)) AND (@Log_MB>8000) AND (@VLFCo>100) AND EXISTS (select 1 FROM sys.databases WHERE is_read_only = 0 and state=0 and db_id()=database_id)
+SELECT @Co=Count_big(StartOff) , @Avg_MB=@Log_MB / Count_big(StartOff), @Max_MB = MAX(FileSize_b/1048576.) from #Log
+IF ( (@Avg_MB>1024) OR (@Avg_MB<64 AND @Log_MB > 1024)) AND (@Log_MB>8000) AND EXISTS (select 1 FROM sys.databases WHERE is_read_only = 0 and state=0 and db_id()=database_id)
 BEGIN
-SELECT DBName= db_name(), VLFCount=@VLFCo, Size_MB=@Log_MB, Avg_MB=@Avg_MB
-SELECT @LCnt=1, @Accu=0
-SELECT top 1 @T=''
-USE [''+d.name+'']
-GO
+SELECT DBName= db_name(), Co=@Co, Size_MB=@Log_MB, Avg_MB=@Avg_MB
+SELECT @LCnt=1, @Ac=0
+SELECT top 1 @T=''USE [''+d.name+''];
 CHECKPOINT
 GO
-DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY);
+DBCC SHRINKFILE (N''''''+mf.name+'''''' , 0, TRUNCATEONLY)
 GO
 USE master
 GO
---Original Size ''+convert(varchar(1000), @Log_MB) +'' MB
+--Orig ''+convert(varchar(1000), @Log_MB) +'' MB
 ''
 FROM sys.databases d join sys.master_files mf on d.database_id=mf.database_id where type_desc=''log'' and db_name()=d.name
 select @LNeed=@Log_MB/8000
 IF (@Log_MB%8000)>=0 
 SELECT @LNeed=@LNeed+1 
-
 WHILE (@LCnt<=@LNeed) BEGIN
 SET @Log_curr=CASE WHEN @LCnt=1 and @Log_MB<=8000 THEN @Log_MB
 WHEN @Log_MB-(8000*@LCnt)>0 THEN 8000 
 WHEN @Log_MB-(8000*@LCnt)<0 THEN @Log_MB-(8000*(@LCnt-1))
 END				
-select @Accu=@Accu+@Log_curr
+select @Ac=@Ac+@Log_curr
 if @Log_curr>0
-select top 1 @T=@T+''ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME=N''''''+mf.name+'''''', SIZE =''+convert(varchar(1000), @Accu)+'' MB );
+select top 1 @T=@T+''ALTER DATABASE [''+d.name+''] MODIFY FILE ( NAME=N''''''+mf.name+'''''', SIZE =''+convert(varchar(1000), @Ac)+'' MB );
 GO
 ''
 FROM sys.databases d join sys.master_files mf on d.database_id=mf.database_id where type_desc=''log'' and db_name()=d.name
@@ -111,9 +112,10 @@ END
 IF @T IS NOT NULL BEGIN
 set @T=@T+''
 ''
-IF @VLFCo  > (@Log_MB / 100) SELECT DB_NAME()+'' excessive VLF count.'';
-IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs too large''; --Not sure if actually possible 
+IF @Co  > (@Log_MB / 100) SELECT DB_NAME()+'' excessive VLF count.'';
+IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs too large'';
 IF @Avg_MB < 64 SELECT DB_NAME()+'' VLFs too small'';
+IF @Max_MB >= 4096 SELECT DB_NAME()+'' single VLF >4GB'';
 print @T;
 END
 Truncate Table #Log;'
