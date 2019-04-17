@@ -7,7 +7,7 @@
 --#TODO 
 --1. Check the name of the DBAHound/DBALogging/DBAAdmin database local to this SQL instance
 --2. Change @StartWindow and @EndWindow values as desired.
---3. Set the job step database context correctly - thsi script doesn't have a USE
+--3. Set the job step database context correctly - this script doesn't have a USE
 --4. If upgrading this script, look at the bottom - we changed the timestamp field data types to datetimeoffset and we need to update the logging table.
 --5. IMPORTANT! Change @TestMode variable to 0 when ready for production
 
