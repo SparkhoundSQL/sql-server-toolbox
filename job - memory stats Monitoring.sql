@@ -1,9 +1,9 @@
 ---based on page life expectancy.sql
 
---select * from [DBAHound].dbo.MemoryStats
+--select * from [DBALogging].dbo.MemoryStats
 
 -- Create Table
-USE [DBAHound]
+USE [DBALogging]
 GO
 
 /****** Object:  Table [dbo].[MemoryStats]    Script Date: 11/20/2017 10:01:45 AM ******/
@@ -35,11 +35,11 @@ CREATE TABLE [dbo].[MemoryStats](
 GO
 
 --Create Sproc
-USE [DBAHound]
+USE [DBALogging]
 GO
 
 /*
-USE DBAHound;
+USE DBALogging;
 GO
 
 CREATE TABLE [dbo].[MemoryStats](
@@ -105,7 +105,7 @@ GO
 USE [msdb]
 GO
 DECLARE @jobId BINARY(16)
-EXEC  msdb.dbo.sp_add_job @job_name=N'Memory Stats_Daily Insert', 
+EXEC  msdb.dbo.sp_add_job @job_name=N'Memory Stats Monitoring', 
 		@enabled=1, 
 		@notify_level_eventlog=0, 
 		@notify_level_email=2, 
@@ -116,11 +116,11 @@ EXEC  msdb.dbo.sp_add_job @job_name=N'Memory Stats_Daily Insert',
 		@owner_login_name=N'sa', @job_id = @jobId OUTPUT
 select @jobId
 GO
-EXEC msdb.dbo.sp_add_jobserver @job_name=N'Memory Stats_Daily Insert', @server_name = N'(LOCAL)'
+EXEC msdb.dbo.sp_add_jobserver @job_name=N'Memory Stats Monitoring', @server_name = N'(LOCAL)'
 GO
 USE [msdb]
 GO
-EXEC msdb.dbo.sp_add_jobstep @job_name=N'Memory Stats_Daily Insert', @step_name=N'Exec Get Memory Stats', 
+EXEC msdb.dbo.sp_add_jobstep @job_name=N'Memory Stats Monitoring', @step_name=N'Exec Get Memory Stats', 
 		@step_id=1, 
 		@cmdexec_success_code=0, 
 		@on_success_action=1, 
@@ -129,12 +129,12 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Memory Stats_Daily Insert', @step_name=
 		@retry_interval=0, 
 		@os_run_priority=0, @subsystem=N'TSQL', 
 		@command=N'exec dbo.usp_GetMemoryStats', 
-		@database_name=N'DBAHound', --make sure db name matches
+		@database_name=N'DBALogging', --make sure db name matches
 		@flags=0
 GO
 USE [msdb]
 GO
-EXEC msdb.dbo.sp_update_job @job_name=N'Memory Stats_Daily Insert', 
+EXEC msdb.dbo.sp_update_job @job_name=N'Memory Stats Monitoring', 
 		@enabled=1, 
 		@start_step_id=1, 
 		@notify_level_eventlog=0, 
@@ -152,7 +152,7 @@ GO
 USE [msdb]
 GO
 DECLARE @schedule_id int
-EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Memory Stats_Daily Insert', @name=N'Every 4 Hours', 
+EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Memory Stats Monitoring', @name=N'Every 4 Hours', 
 		@enabled=1, 
 		@freq_type=4, 
 		@freq_interval=1, 

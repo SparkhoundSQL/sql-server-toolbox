@@ -134,7 +134,7 @@ GO
 USE [msdb]
 GO
 DECLARE @jobId BINARY(16)
-EXEC  msdb.dbo.sp_add_job @job_name=N'Volume Stats_Daily Insert', 
+EXEC  msdb.dbo.sp_add_job @job_name=N'Volume Stats Monitoring', 
 		@enabled=1, 
 		@notify_level_eventlog=0, 
 		@notify_level_email=2, 
@@ -145,11 +145,11 @@ EXEC  msdb.dbo.sp_add_job @job_name=N'Volume Stats_Daily Insert',
 		@owner_login_name=N'sa', @job_id = @jobId OUTPUT
 select @jobId
 GO
-EXEC msdb.dbo.sp_add_jobserver @job_name=N'Volume Stats_Daily Insert', @server_name = N'(LOCAL)'
+EXEC msdb.dbo.sp_add_jobserver @job_name=N'Volume Stats Monitoring', @server_name = N'(LOCAL)'
 GO
 USE [msdb]
 GO
-EXEC msdb.dbo.sp_add_jobstep @job_name=N'Volume Stats_Daily Insert', @step_name=N'Exec Get Volume Stats', 
+EXEC msdb.dbo.sp_add_jobstep @job_name=N'Volume Stats Monitoring', @step_name=N'Exec Get Volume Stats', 
 		@step_id=1, 
 		@cmdexec_success_code=0, 
 		@on_success_action=1, 
@@ -163,7 +163,7 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Volume Stats_Daily Insert', @step_name=
 GO
 USE [msdb]
 GO
-EXEC msdb.dbo.sp_update_job @job_name=N'Volume Stats_Daily Insert', 
+EXEC msdb.dbo.sp_update_job @job_name=N'Volume Stats Monitoring', 
 		@enabled=1, 
 		@start_step_id=1, 
 		@notify_level_eventlog=0, 
@@ -181,7 +181,7 @@ GO
 USE [msdb]
 GO
 DECLARE @schedule_id int
-EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Volume Stats_Daily Insert', @name=N'Every 4 Hours', 
+EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Volume Stats Monitoring', @name=N'Every 4 Hours', 
 		@enabled=1, 
 		@freq_type=4, 
 		@freq_interval=1, 

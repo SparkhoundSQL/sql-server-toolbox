@@ -12,7 +12,8 @@ CREATE TABLE [dbo].[Space_in_Files](
 ,FileSizeMB decimal(19,2)
 ,SpaceUsedMB decimal(19,2)
 ,AvailableMB decimal(19,2)
-,FreePercent decimal(9,2),
+,FreePercent decimal(9,2)
+,DateTimePerformed datetimeoffset(2) CONSTRAINT DF_Space_in_Files_DateTimePerformed DEFAULT (sysdatetimeoffset())
  CONSTRAINT [PK_Space_in_Files] PRIMARY KEY CLUSTERED 
 (	[ID] ASC)
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
@@ -67,6 +68,9 @@ SELECT
 '
 
 delete from @SpaceInFiles where [FreePercent] > @Threshold
+
+INSERT INTO [Space_in_Files] (DatabaseName,recovery_model_desc  ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent )
+SELECT DatabaseName,recovery_model_desc  ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent  FROM @SpaceInFiles;
 
 if (SELECT COUNT(*) FROM @SpaceInFiles) > 0
 BEGIN --added BEGIN/END wrap on IF - WDA 20170312 
