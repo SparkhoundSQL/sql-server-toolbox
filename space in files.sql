@@ -1,3 +1,7 @@
+--Observe space in data and log files
+--Pregenerated scripts to shrink and/or grow files. Do not shrink unless an unusual/emergency situation has created an overgrown log file. 
+--See also "vlfs analysis.sql"
+
 DECLARE @TempTable TABLE
 ( DatabaseName varchar(128)
 ,recovery_model_desc varchar(50)
@@ -9,6 +13,7 @@ DECLARE @TempTable TABLE
 ,SpaceUsedMB decimal(19,2)
 ,AvailableMB decimal(19,2)
 ,FreePercent decimal(19,2)
+,shrinkTSQL nvarchar(4000)
 ,growTSQL nvarchar(4000)
 )
 
@@ -36,6 +41,8 @@ SELECT
 , SpaceUsedMB		= CAST(CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0 as Decimal(9,2))
 , AvailableMB		= CAST(size/128.0 - CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0 as Decimal(9,2))
 , FreePercent		= CAST((((size/128.0) - (CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0)) / (size/128.0) ) * 100. as Decimal(9,2))
+, shrinkTSQL	=	''USE [?];
+DBCC SHRINKFILE (N''+ df.name COLLATE SQL_Latin1_General_CP1_CI_AS +'' , 0, TRUNCATEONLY)''
  FROM sys.database_files df
  CROSS APPLY sys.databases d
  WHERE d.database_id = DB_ID() 
