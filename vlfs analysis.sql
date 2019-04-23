@@ -30,8 +30,7 @@ Create Table #Log(
   , [Status]    int not null
   , Parity      bigint not null
   , CreateLSN   decimal(30,0) not null
-);
- DBCC LogInfo('w') with no_infomsgs
+);  
 Exec sp_MSforeachdb N'Use [?]; 
 Insert Into #Log  
 Exec sp_executesql N''DBCC LogInfo([?]) with no_infomsgs''; 
