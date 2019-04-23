@@ -19,7 +19,7 @@ SELECT @@SERVERNAME
 DECLARE @BytesFlushed_Start_ms bigint, @BytesFlushed_Start bigint, @BytesFlushed_End_ms bigint, @BytesFlushed_End bigint
 
 DECLARE @TransactionDelay TABLE
-(	DB sysname not null
+(	DB sysname COLLATE SQL_Latin1_General_CP1_CI_AS not null
 ,	TransactionDelay_Start_ms decimal(19,2) null
 ,	TransactionDelay_end_ms decimal(19,2) null
 ,	TransactionDelay_Start decimal(19,2) null
