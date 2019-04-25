@@ -114,15 +114,15 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 		N'</table>' ;  
   
 	BEGIN
-	--if @percent < @Threshold -- removed WDA 20170418
-	--BEGIN
+	if @percent < @Threshold -- removed WDA 20170418
+	BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
 		   @recipients = 'sql.alerts@sparkhound.com',  
 		   @body = @tableHTML, 
 		   @importance = 'HIGH', 
 		   @body_format ='HTML',
 		   @subject = 'Volume Size Report' ;  
-	--END
+	END
 	END
 	END
 END;
