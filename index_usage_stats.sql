@@ -1,7 +1,10 @@
 --Discover indexes that aren't helping reads but still hurting writes
 --Does not show tables that have never been written to
+--Updated 5/1: Show index usage for current database
 
-SELECT  TableName 			= ' [' + sc.name + '].[' + o.name + ']'
+SELECT  DatabaseName		= d.name
+	,	s.object_id
+	,	TableName 			= ' [' + sc.name + '].[' + o.name + ']'
     ,   IndexName			= i.name
     ,   s.user_seeks
     ,   s.user_scans
@@ -33,6 +36,9 @@ FROM	sys.dm_db_index_usage_stats s
 			and ps.partition_id = pr.partition_id
 		left outer join sys.partition_schemes psch 
 			on psch.data_space_id = i.data_space_id
+		inner join sys.databases d
+			on s.database_id = d.database_id
+			and db_name() = d.name
 WHERE 1=1 
 --Strongly recommended filters
 and o.is_ms_shipped = 0
@@ -48,8 +54,4 @@ and is_unique_constraint = 0
 --and o.name not like '%cascade%'
 --and (ps.in_row_reserved_page_count) > 1280 --10mb
 
-
---order by Tablename, indexname
 order by user_seeks + user_scans + user_lookups  asc,  s.user_updates desc;
-
-
