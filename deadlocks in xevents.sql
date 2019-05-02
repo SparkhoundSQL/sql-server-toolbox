@@ -22,22 +22,11 @@ FROM (
 ) AS x
 ORDER BY Occured desc
 
-
-
+GO
 /*
---alternative version for SQL 2016
---http://www.sqlservercentral.com/blogs/simple-sql-server/2016/01/25/querying-deadlocks-from-system_health-xevent/
+--Read from .xel file instead of ring_buffer - slower, potentially fewer skipped rows
 
-DECLARE @SessionName SysName 
-
-SELECT @SessionName = 'system_health'
-
-/* 
-SELECT  Session_Name = s.name, s.blocked_event_fire_time, s.dropped_buffer_count, s.dropped_event_count, s.pending_buffers
-FROM sys.dm_xe_session_targets t
-	INNER JOIN sys.dm_xe_sessions s ON s.address = t.event_session_address
-WHERE target_name = 'event_file'
---*/
+DECLARE @SessionName SysName = 'system_health'
 
 IF OBJECT_ID('tempdb..#Events') IS NOT NULL BEGIN
 	DROP TABLE #Events
@@ -63,6 +52,15 @@ SELECT DeadlockGraph = CAST(event_data AS XML)
 INTO #Events
 FROM sys.fn_xe_file_target_read_file(@Target_File_WildCard, null, null, null) AS F
 WHERE event_data like '<event name="xml_deadlock_report%'
+
+--Just the deadlock graphs, like above
+SELECT DeadlockGraph 
+FROM #Events
+
+
+
+--Further analysis
+--From http://www.sqlservercentral.com/blogs/simple-sql-server/2016/01/25/querying-deadlocks-from-system_health-xevent/
 
 ;WITH Victims AS
 (
