@@ -88,7 +88,8 @@ into #BackupFailureFULL
 					  group by db_name(d.database_id)
  ) a
  on db_name(d.database_id) = a.database_name
- WHERE a.database_name not in ('tempdb')
+ WHERE a.database_name not in ('tempdb', 'model') and
+ a.state_desc ='ONLINE'
 group by 
 	  a.database_name
 	, a.backuptype 
