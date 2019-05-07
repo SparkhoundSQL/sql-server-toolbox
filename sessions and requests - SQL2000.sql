@@ -11,13 +11,16 @@ select sql_handle from sys.sysprocesses
 where spid >= 50 
 and sql_handle <> convert(binary(20), 0x0000000000000000000000000000000000000000)--status='runnable';
 and spid <> @@SPID
-and db_name(dbid)  = 'LPMS_BE'
+order by spid
+
 open cursyssysprocesses;
 	fetch next from cursyssysprocesses into @sql_handle; 
 	while (@@FETCH_STATUS =0) 
 	BEGIN 
 		select 
-			b.hostname
+			spid
+		,	sql_handle
+		,	b.hostname
 		,	c.name
 		,	b.program_name
 		,	b.loginame
