@@ -57,8 +57,6 @@ WHERE event_data like '<event name="xml_deadlock_report%'
 SELECT DeadlockGraph 
 FROM #Events
 
-
-
 --Further analysis
 --From http://www.sqlservercentral.com/blogs/simple-sql-server/2016/01/25/querying-deadlocks-from-system_health-xevent/
 
