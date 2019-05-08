@@ -80,15 +80,15 @@ INSERT INTO @readerrorlog (LogDate, LogProcessInfo, LogMessageText)
 	, null, null --time filter. Should be @oldestdate < @now
 	, N''desc''			--sort
 
---select * from @readerrorlog order by logdate asc
+--select * from @readerrorlog order by LogDate asc
 
 INSERT INTO @readerrorlog_found  (LogDate, LogProcessInfo, LogMessageText)
 select * from @readerrorlog
-where  (logmessagetext like ''%Error%''
-or logmessagetext like ''%corruption%''
-or logmessagetext like ''%prevent%''
-or logmessagetext like ''%could not register the Service Principal Name%''
-or logmessagetext like ''%could not be decrypted%''
+where  (LogMessageText like ''%Error%''
+or LogMessageText like ''%corruption%''
+or LogMessageText like ''%prevent%''
+or LogMessageText like ''%could not register the Service Principal Name%''
+or LogMessageText like ''%could not be decrypted%''
 or LogMessageText like ''%warning%''
 or LogMessageText like ''%Could not open file%''
 or LogMessageText like ''%Unable to open%''
@@ -109,8 +109,8 @@ or LogMessageText like ''%could not redo%''
 or LogMessageText like ''%* DBCC database corruption%''
 
 )
-and (logmessagetext not like ''Registry startup parameters%''
-and logmessagetext not like ''Logging SQL Server messages in file%''
+and (LogMessageText not like ''Registry startup parameters%''
+and LogMessageText not like ''Logging SQL Server messages in file%''
 and LogMessageText not like ''%without errors%''
 and LogMessageText not like ''%found 0 errors%''
 and LogMessageText not like ''Login failed%''
@@ -149,7 +149,7 @@ and LogMessageText not like ''READ UNCOMMITTED%''
 and LogMessageText not like ''Error: 7886, Severity: 20%''
 
 )
-order by logdate
+order by LogDate
 
 
 IF EXISTS  (Select * from sys.databases d where STATE = 4)
@@ -174,7 +174,7 @@ select 	@body = @body + ''
 <td>'' + isnull(LogProcessInfo, '''')+ ''</td>
 <td>'' + LogMessageText+ ''</td></tr>''
 --, *
-from @readerrorlog_found order by logdate asc;
+from @readerrorlog_found order by LogDate asc;
 select @body = @body + ''</table>
 ''
 
@@ -184,7 +184,7 @@ BEGIN TRY
 
 INSERT INTO dbo.startup_readerrorlog_found ( LogDate , LogProcessInfo , [LogMessageText], When_Startup_Detected )
 Select LogDate, LogProcessInfo , [LogMessageText], @When_Startup_Detected 
-from @readerrorlog_found  order by logdate asc;
+from @readerrorlog_found  order by LogDate asc;
 
 END TRY 
 BEGIN CATCH
