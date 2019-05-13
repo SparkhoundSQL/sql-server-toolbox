@@ -23,5 +23,5 @@ SELECT
  INNER JOIN 	dbo.[Users] u on s.[OwnerID] = u.[UserID]
 left outer join dbo.ExecutionLog3 el  on el.itempath = c.path
  where el.requesttype = 'subscription'
- --and laststatus not like '%0 errors.'
+ --and laststatus not like '%0 errors.' 
 order by s.LastRunTime desc, el.timestart desc
