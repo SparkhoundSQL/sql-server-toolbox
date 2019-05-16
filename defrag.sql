@@ -13,7 +13,7 @@
 SELECT DISTINCT
 	SQL_Reorg				= 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REORGANIZE; 
 								UPDATE STATISTICS ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name]  + ';'
-,	SQL_Rebuild				= 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REBUILD WITH (SORT_IN_TEMPDB = ON);'  
+,	SQL_Rebuild				= 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REBUILD WITH (ONLINE = ON, SORT_IN_TEMPDB = ON);'  
 ,	max_fragmentation_pct	=	MAX(avg_fragmentation_pct) -- Use the highest amount of fragmentation we find in any index on a table.
 ,	avg_fragmentation_pct	=	AVG(avg_fragmentation_pct) -- Use the avg amount of fragmentation we find across all indexes 
 ,	page_count				=	SUM(page_count)
@@ -37,15 +37,8 @@ FROM (	SELECT
 		AND o.object_id not in (select object_id from sys.indexes where index_id = 0) -- This table is a heap and probably needs a clustered index. Rebuilding will do no good. Ignore. 
 	) x
 GROUP BY x.DB , x.[schema_name] , x.[table_name] 
-
 HAVING 1=1
 --AND	SUM(page_count) > 1280 --1280 pages is 10mb, ignore anything smaller
 --AND AVG(avg_fragmentation_pct) > 50
 
-ORDER BY SUM(page_count) desc, AVG(avg_fragmentation_pct) desc;
-
-/*
-ALTER INDEX ALL ON SPARK.dbo.GL20000 REBUILD WITH (SORT_IN_TEMPDB = ON);
-ALTER INDEX ALL ON SPARK.dbo.RM10101 REBUILD WITH (SORT_IN_TEMPDB = ON);
-
-*/
+ORDER BY  AVG(avg_fragmentation_pct) desc, SUM(page_count) desc;
