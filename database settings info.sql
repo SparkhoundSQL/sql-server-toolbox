@@ -39,6 +39,7 @@ select
 ,	[Alter]					= CASE WHEN Up_To_Date is not null THEN 'ALTER DATABASE [' + Database_Name +'] SET COMPATIBILITY_LEVEL = ' + LEFT(convert(varchar(15), SERVERPROPERTY('ProductVersion')),2) + '0;' ELSE NULL END
 ,	[Revert]				= CASE WHEN Up_To_Date is not null THEN 'ALTER DATABASE [' + Database_Name +'] SET COMPATIBILITY_LEVEL = ' + convert(char(3), [compatibility_level]) + ';' ELSE NULL END
 from cteDB
+WHERE Up_to_Date is not null
 order by [Database_Name];
 
 --Databases where page verify option is not CHECKSUM
@@ -46,6 +47,7 @@ order by [Database_Name];
 select
  	[Database Name]			= name
 ,	[Page Verify Option]	= page_verify_option_desc
+,	[Message]				= 'Page Verify Option MUST be CHECKSUM!'
 ,	[Alter]					= 'ALTER DATABASE [' + name +'] SET PAGE_VERIFY CHECKSUM WITH NO_WAIT; --Need to rebuild indexes on all objects in DB to take effect '
 ,	[Revert]				= 'ALTER DATABASE [' + name +'] SET PAGE_VERIFY ' + page_verify_option_desc COLLATE DATABASE_DEFAULT + ' WITH NO_WAIT;'
 ,	[State]					= dbstate		
@@ -119,6 +121,7 @@ select
 ,	[Log Reuse Wait]	= log_reuse_wait
 ,	[Description]		= log_reuse_wait_desc
 ,	[State]				= dbstate		
+,	[Recovery Model]	= recovery_model_desc
 from #DBSettings
 ORDER BY name;
 
