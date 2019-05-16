@@ -1,7 +1,7 @@
 use reportserver
 go
 SELECT Catalog.Name AS ReportName
-,'http://neillsqlssrs/Reports/Pages/Report.aspx?ItemPath=' + Catalog.Path + '&SelectedTabId=PropertiesTab&SelectedSubTabId=SubscriptionsTab' AS ReportSubscriptionMgrUrl
+,'http://serverwhatever/Reports/Pages/Report.aspx?ItemPath=' + Catalog.Path + '&SelectedTabId=PropertiesTab&SelectedSubTabId=SubscriptionsTab' AS ReportSubscriptionMgrUrl
 ,Subscriptions.Description AS SubscriptionDescription
 ,Subscriptions.LastStatus
 ,Subscriptions.LastRunTime
@@ -38,9 +38,6 @@ ISNULL(
 ,	Convert(XML,[ExtensionSettings]).value('(//ParameterValue/Value[../Name="RENDER_FORMAT"])[1]','nvarchar(50)')
 ) as [Render Format]
 ,Convert(XML,[ExtensionSettings]).value('(//ParameterValue/Value[../Name="Subject"])[1]','nvarchar(150)') as [Subject]
-
-
-
 ,*
 FROM [dbo].[ReportSchedule]
 INNER JOIN [dbo].[Schedule]
@@ -53,5 +50,5 @@ INNER JOIN [dbo].[Users]
 ON Subscriptions.OwnerID = Users.UserID
 INNER JOIN msdb.dbo.sysjobs J ON Convert(nvarchar(128),[ReportSchedule].ScheduleID) = J.name
 INNER JOIN msdb.dbo.sysjobschedules JS ON J.job_id = JS.job_id
-
-
+ 
+order by schedule.lastruntime desc
