@@ -55,11 +55,11 @@ FROM sys.databases d inner join sys.master_files mf on d.database_id=mf.database
 IF @T IS NOT NULL BEGIN
 	set @T=@T+''
 ''
-	IF @Co  > (@Log_MB / 100)
+	IF @Co>(@Log_MB/100) and @Co>50
 	SELECT DB_NAME()+'' log file too many VLFs.''
 	IF @Avg_MB > 1024 
 	SELECT DB_NAME()+'' log file VLFs too large.''
-	IF (@Avg_MB < 64 AND @Log_MB > 1024)
+	IF (@Avg_MB<64 AND @Log_MB>1024) and @Co>50
 	SELECT DB_NAME()+'' log file VLFs too small.''
 	IF (@Max_MB >= 4096) 
 	SELECT DB_NAME()+'' single log file VLF >4000MB''
@@ -111,8 +111,8 @@ END
 IF @T IS NOT NULL BEGIN
 set @T=@T+''
 ''
-IF @Co  > (@Log_MB / 100) SELECT DB_NAME()+'' excessive VLF count.'';
-IF @Avg_MB > 1024 SELECT DB_NAME()+'' VLFs too large'';
+IF @Co>(@Log_MB/100) and @Co>50 SELECT DB_NAME()+'' excessive VLF count.'';
+IF (@Avg_MB<64 AND @Log_MB>1024) and @Co>50 SELECT DB_NAME()+'' VLFs too large'';
 IF @Avg_MB < 64 SELECT DB_NAME()+'' VLFs too small'';
 IF @Max_MB >= 4096 SELECT DB_NAME()+'' single VLF >4GB'';
 print @T;
