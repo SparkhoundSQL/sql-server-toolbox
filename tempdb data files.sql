@@ -1,9 +1,9 @@
 --TempDB data files should all be the same size, same autogrowth settings
 --Only displays TempDB data files.
-use tempdb
-go
-DECLARE @cpu_count int 
-select @cpu_count = cpu_count from sys.dm_os_sys_info
+USE tempdb
+GO
+DECLARE @cpu_count int;
+SELECT @cpu_count = cpu_count from sys.dm_os_sys_info;
 
 --data files
 select mf.name
@@ -23,7 +23,7 @@ CASE WHEN count(mf.file_id) OVER (PARTITION BY mf.database_id) > @cpu_count THEN
 , file_system_type
 , drive_size_GB = (CONVERT(decimal(19,2), vs.total_bytes/1024./1024./1024. ))
 , drive_free_space_GB = (CONVERT(decimal(19,2), vs.available_bytes/1024./1024./1024. ))
-, drive_percent_free = (CONVERT(DECIMAL(5,2), vs.available_bytes * 100.0 / vs.total_bytes))
+, drive_pct_free = (CONVERT(DECIMAL(5,2), vs.available_bytes * 100.0 / vs.total_bytes))
 from sys.master_files mf
 inner join tempdb.sys.database_files d
 on mf.file_id = d.file_id
@@ -45,15 +45,17 @@ select mf.name
 , file_system_type
 , drive_size_GB = (CONVERT(decimal(19,2), vs.total_bytes/1024./1024./1024. ))
 , drive_free_space_GB = (CONVERT(decimal(19,2), vs.available_bytes/1024./1024./1024. ))
-, drive_percent_free = (CONVERT(DECIMAL(5,2), vs.available_bytes * 100.0 / vs.total_bytes))
+, drive_pct_free = (CONVERT(DECIMAL(5,2), vs.available_bytes * 100.0 / vs.total_bytes))
 from sys.master_files mf
 inner join tempdb.sys.database_files d
 on mf.file_id = d.file_id
-and mf.database_id = db_id()
+and mf.database_id = db_id() 
 cross apply sys.dm_os_volume_stats(mf.database_id, mf.file_id) vs --only return volumes where there is database file (data or log)
 where d.type_desc = 'log'
-order by mf.file_id asc
+order by mf.file_id asc;
 
+SELECT servicename, status_desc, last_startup_time FROM sys.dm_server_services;
+GO
 --To resize tempdb: 
 
 /*
