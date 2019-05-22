@@ -4,23 +4,24 @@
 
 SELECT 
 	mid.statement 
-/* --This block SQL 2017 only
+/* --This block SQL 2017+ only
 ,	create_index_statement_2017 =	'CREATE NONCLUSTERED INDEX IDX_NC_' + replace(t.name, ' ' ,'')
-	+ TRANSLATE(ISNULL(replace(mid.equality_columns, ' ' ,''),'') , '],[' ,' _ ') --Translate is supported for SQL 2017+
+	+ TRANSLATE(ISNULL(replace(mid.equality_columns, ' ' ,''),'') , '],[' ,' _ ') --Translate is only supported for SQL 2017+
 	+ TRANSLATE(ISNULL(replace(mid.inequality_columns, ' ' ,''),''), '],[' ,' _ ')
 	+ ' ON ' + statement 
 	+ ' (' + ISNULL (mid.equality_columns,'') 
-    + CASE WHEN mid.equality_columns IS NOT NULL AND mid.inequality_columns IS NOT NULL THEN ',' ELSE '' END 
+    + CASE WHEN mid.equality_columns IS NOT NULL AND mid.inequality_columns IS NOT NULL THEN ', ' ELSE '' END 
     + ISNULL (mid.inequality_columns, '')
 	+ ')' 
 	+ ISNULL (' INCLUDE (' + mid.included_columns + ')', '')  COLLATE SQL_Latin1_General_CP1_CI_AS
 */
+
 ,	create_index_statement	=	'CREATE NONCLUSTERED INDEX IDX_NC_' + replace(t.name, ' ' ,'')
 	+ replace(replace(replace(ISNULL(replace(mid.equality_columns, ' ' ,''),'') , '],[' ,'_'),'[','_'),']','') 
 	+ replace(replace(replace(ISNULL(replace(mid.inequality_columns, ' ' ,''),''), '],[' ,'_'),'[','_'),']','') 
 	+ ' ON ' + statement 
 	+ ' (' + ISNULL (mid.equality_columns,'') 
-    + CASE WHEN mid.equality_columns IS NOT NULL AND mid.inequality_columns IS NOT NULL THEN ',' ELSE '' END 
+    + CASE WHEN mid.equality_columns IS NOT NULL AND mid.inequality_columns IS NOT NULL THEN ', ' ELSE '' END 
     + ISNULL (mid.inequality_columns, '')
 	+ ')' 
 	+ ISNULL (' INCLUDE (' + mid.included_columns + ')', '')  COLLATE SQL_Latin1_General_CP1_CI_AS
@@ -47,8 +48,12 @@ and mid.database_id = db_id()
 --and		migs.user_seeks > 10
 --and		migs.avg_user_impact > 75
 --and		t.name like '%pt_time_salesorder_ids%'
---order by avg_user_impact * avg_total_user_cost desc 
-order by create_index_statement
+--order by avg_user_impact * avg_total_user_cost desc;
+order by create_index_statement;
+
+
+SELECT servicename, status_desc, last_startup_time FROM sys.dm_server_services;
+GO
 
 
 /*

@@ -1,6 +1,5 @@
 --Discover indexes that aren't helping reads but still hurting writes
 --Does not show tables that have never been written to
---Updated 5/1: Show index usage for current database
 
 SELECT  DatabaseName		= d.name
 	,	s.object_id
@@ -54,4 +53,8 @@ and is_unique_constraint = 0
 --and o.name not like '%cascade%'
 --and (ps.in_row_reserved_page_count) > 1280 --10mb
 
-order by user_seeks + user_scans + user_lookups  asc,  s.user_updates desc;
+order by user_seeks + user_scans + user_lookups  asc,  s.user_updates desc; --most useless indexes show up first
+
+
+SELECT servicename, status_desc, last_startup_time FROM sys.dm_server_services;
+GO
