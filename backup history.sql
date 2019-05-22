@@ -119,8 +119,8 @@ SELECT
 							WHEN bs.type = 'P' then 'Partial'
 							WHEN bs.type = 'Q' then 'Differential partial' END + ' Backup'
 	, bs.recovery_model
-	, LatestBackupStartDate = max(bs.Backup_Start_Date) OVER(PARTITION BY bs.database_name)
-	, LatestBackupFinishDate = max(bs.Backup_Finish_Date) OVER(PARTITION BY bs.database_name)
+	, BackupStartDate = bs.Backup_Start_Date
+	, BackupFinishDate = bs.Backup_Finish_Date
 	, LatestBackupLocation = bf.physical_device_name
 	, backup_size_mb			=	bs.backup_size / 1024./1024.
 	, compressed_backup_size_mb =	bs.compressed_backup_size /1024./1024.
