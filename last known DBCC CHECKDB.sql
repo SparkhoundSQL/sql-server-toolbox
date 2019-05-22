@@ -6,7 +6,7 @@ INSERT INTO #DBInfo EXECUTE ("DBCC DBINFO ( ""?"" ) WITH TABLERESULTS");
 INSERT INTO #Value (DatabaseName, LastDBCCCheckDB) (SELECT "?", [Value] FROM #DBInfo WHERE Field = "dbi_dbccLastKnownGood");
 TRUNCATE TABLE #DBInfo;
 '
-SELECT * FROM #Value
+SELECT v.*, d.state_desc FROM #Value v inner join sys.databases d on v.DatabaseName = d.name 
 GO
 DROP TABLE #DBInfo
 DROP TABLE #Value 
