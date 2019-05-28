@@ -40,7 +40,7 @@ SELECT
 , FK_Name		= fk.name 
 , fk.is_not_trusted
 , fk.is_disabled
-FROM sys.foreign_keys as FK
+FROM sys.foreign_keys as fk
 	INNER JOIN sys.objects as o ON fk.parent_object_id = o.object_id
 	INNER JOIN sys.schemas as s ON o.schema_id = s.schema_id
 where o.name in ('table1','table2')
