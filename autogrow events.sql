@@ -32,7 +32,11 @@
 	and		te.name in ('Data File Auto Grow','Log File Auto Grow')
 	and		g.StartTime > dateadd(d, -7, sysdatetime()) 
 	--GROUP BY StartTime,Databaseid, Filename, IntegerData, Duration
-	order by StartTime desc
+	order by StartTime desc;
+
+	SELECT servicename, status_desc, last_startup_time FROM sys.dm_server_services;
+GO
+
 
 
 
