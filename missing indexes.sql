@@ -14,6 +14,7 @@ SELECT
     + ISNULL (mid.inequality_columns, '')
 	+ ')' 
 	+ ISNULL (' INCLUDE (' + mid.included_columns + ')', '')  COLLATE SQL_Latin1_General_CP1_CI_AS
+	--+ ISNULL (' WITH (ONLINE = ON, SORT_IN_TEMPDB = ON)', '')  COLLATE SQL_Latin1_General_CP1_CI_AS --For SQL Server Enterprise Only
 */
 
 ,	create_index_statement	=	'CREATE NONCLUSTERED INDEX IDX_NC_' + replace(t.name, ' ' ,'')
@@ -25,6 +26,7 @@ SELECT
     + ISNULL (mid.inequality_columns, '')
 	+ ')' 
 	+ ISNULL (' INCLUDE (' + mid.included_columns + ')', '')  COLLATE SQL_Latin1_General_CP1_CI_AS
+	--+ ISNULL (' WITH (ONLINE = ON, SORT_IN_TEMPDB = ON)', '')  COLLATE SQL_Latin1_General_CP1_CI_AS --For SQL Server Enterprise Only
 ,	unique_compiles, migs.user_seeks, migs.user_scans, last_user_seek, migs.avg_total_user_cost, avg_user_impact
 , mid.equality_columns,  mid.inequality_columns, mid.included_columns
 , quartile
