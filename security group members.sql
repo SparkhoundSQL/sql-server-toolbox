@@ -3,3 +3,8 @@
 EXEC master..xp_logininfo 
 @acctname = 'domain\groupname',
 @option = 'members'
+
+--Instead, use PowerShell:
+--Get-ADGroupMember -identity 'Development' -recursive | select name
+
+--or the windows plugin "Active Directory Users and Computers"
