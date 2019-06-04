@@ -1,40 +1,40 @@
---Worst query plans
+--Worst query plans in cache
 --To find the worst queries and their plan(s), use Query Store (SQL 2016+)
 --Table to capture this data at bottom
 
---INSERT INTO dbo.worstqueries
-select top 15 
-*
-, Average_cpu		=	convert(decimal(19,2), tot_cpu_ms)/convert(decimal(19,2),usecounts)
-, Average_Duration	=	convert(decimal(19,2),tot_duration_ms)/convert(decimal(19,2),usecounts)
-, WorstQueriesObservedWhen		=	sysdatetime()
-, DeleteQueryPlan	= 'DBCC FREEPROCCACHE('+convert(varchar(512),PlanHandle,1)+')'  --delete just this plan
- from 
+--INSERT INTO dbo.worstqueryplans
+SELECT TOP 15 *
+, Average_cpu						=	convert(decimal(19,2), tot_cpu_ms)/convert(decimal(19,2),usecounts)
+, Average_Duration					=	convert(decimal(19,2),tot_duration_ms)/convert(decimal(19,2),usecounts)
+, WorstQueryPlansObservedWhen		=	sysdatetime()
+, DeleteQueryPlan					= 'ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE '+convert(varchar(512),PlanHandle,1) --delete just this plan, works in Azure SQL or SQL 2016+
+--, DeleteQueryPlan	= 'DBCC FREEPROCCACHE('+convert(varchar(512),PlanHandle,1)+')'  --delete just this plan (old syntax)
+FROM 
 (
 	SELECT 
-		  PlanStats.CpuRank, PlanStats.PhysicalReadsRank, PlanStats.DurationRank
-		, dbname = db_name( convert(int, pa.value) )
-		, cacheobjtype = LEFT (p.cacheobjtype + ' (' + p.objtype + ')', 35) 
+		  PlanStats.CpuRank, PlanStats.PhysicalReadsRank, PlanStats.DurationRank --ranks, 1 = worst offender with highest number in this category
+		, dbname = db_name(convert(int, pa.value))
+		, cacheobjtype = LEFT(p.cacheobjtype + ' (' + p.objtype + ')', 35) 
 	    , p.usecounts, p.size_in_bytes / 1024 AS size_in_kb,
 		  PlanStats.total_worker_time/1000 AS tot_cpu_ms, PlanStats.total_elapsed_time/1000 AS tot_duration_ms, 
 		  PlanStats.total_physical_reads, PlanStats.total_logical_writes, PlanStats.total_logical_reads,
 		  PlanStats.last_execution_time
-		, sql.objectid
-		, Procedure_name = CONVERT (nvarchar(75), CASE 
-											WHEN sql.objectid IS NULL THEN NULL 
-											ELSE --Find the procedure name even in the comments block
-												REPLACE (REPLACE (
-												substring(sql.[text], charindex('CREATE',sql.[text],0),100)
-												, CHAR(13), ' '), CHAR(10), ' ')
-										  END)  
-		, stmt_text = 	REPLACE (REPLACE (SUBSTRING (sql.[text], PlanStats.statement_start_offset/2 + 1, 
-						  CASE WHEN PlanStats.statement_end_offset = -1 THEN LEN (CONVERT(nvarchar(max), sql.[text])) 
-							ELSE PlanStats.statement_end_offset/2 - PlanStats.statement_start_offset/2 + 1
-						  END), CHAR(13), ' '), CHAR(10), ' ') 
-		, ReasonforEarlyTermination = CASE WHEN tqp.query_plan LIKE '%StatementOptmEarlyAbortReason%' THEN substring(substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21), 1, ISNULL(ABS(charindex('"',substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21),1)-1),0))
+		, sql.objectid --if it's an object with the cached plan, look it up in the database name
+		, [Procedure_name]	= CONVERT (nvarchar(75), CASE	WHEN sql.objectid IS NULL THEN NULL 
+															ELSE --Find the procedure name even in the comments block
+																	REPLACE (REPLACE (
+																	substring(sql.[text], charindex('CREATE',sql.[text],0),100)
+																	, CHAR(13), ' '), CHAR(10), ' ')
+															END)
+		, stmt_text			 = 	REPLACE (REPLACE (SUBSTRING (sql.[text], PlanStats.statement_start_offset/2 + 1, 
+								  CASE WHEN PlanStats.statement_end_offset = -1 THEN LEN (CONVERT(nvarchar(max), sql.[text])) 
+									ELSE PlanStats.statement_end_offset/2 - PlanStats.statement_start_offset/2 + 1
+								  END), CHAR(13), ' '), CHAR(10), ' ') 
+		, ReasonforEarlyTermination = CASE WHEN tqp.query_plan LIKE '%StatementOptmEarlyAbortReason%' 
+											THEN substring(substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21), 1, ISNULL(ABS(charindex('"',substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21),1)-1),0))
 											ELSE NULL END 
-		, QueryPlan		=	qp.query_plan	
-		, PlanHandle	=	p.plan_handle
+		, QueryPlan			=	qp.query_plan	
+		, PlanHandle		=	p.plan_handle
 		FROM 
 		(
 		  SELECT 
@@ -56,24 +56,20 @@ select top 15
 		OUTER APPLY sys.dm_exec_text_query_plan(p.plan_handle, 
                                                 PlanStats.statement_start_offset, 
                                                 PlanStats.statement_end_offset) AS tqp 
-		
 		WHERE 1=1
-
-		 --and (PlanStats.CpuRank < 10 OR PlanStats.PhysicalReadsRank < 10 OR PlanStats.DurationRank < 10)
 		  AND pa.attribute = 'dbid' 
-		  --and usecounts > 1
-		  --and (sql.text like '%SH_View_Utilization_Detail%' )
+		  and usecounts > 1 --ignore once-used plans in plan cache
 		  AND (CONVERT(nvarchar(max), sql.[text])) not like '%StatementOptmEarlyAbortReason%'
+		  --and (sql.text like '%SH_View_Utilization_Detail%' )
 		  --AND (tqp.query_plan LIKE '%StatementOptmEarlyAbortReason="TimeOut%' or tqp.query_plan LIKE '%StatementOptmEarlyAbortReason="Memory Limit%')
 ) x
---where dbname = N'ram_tax'
-ORDER BY CpuRank + PhysicalReadsRank + DurationRank asc
+--WHERE dbname = N'whateverdatabasename'
+ORDER BY CpuRank + PhysicalReadsRank + DurationRank asc; 
 
-
---select * from dbo.worstqueries
+--select * from dbo.worstqueryplans
 
 /*----------------
-SQL 2000 only
+--For SQL 2000 only
 SELECT 
 UseCounts, RefCounts,CacheObjtype, ObjType, DB_NAME(dbid) as DatabaseName, SQL
 FROM sys.syscacheobjects
@@ -82,10 +78,11 @@ ORDER BY dbid,usecounts DESC,objtype
 GO
 -----------------*/
 /*
-ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE; --sql 2016+
+--Samples to clear plans out of the plan cache
 
-DBCC FREEPROCCACHE
+ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE; --delete all plans, works in Azure SQL or SQL 2016+
 
+ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE 0x060001004EE9FD0570E185E06F02000001000000000000000000000000000000000000000000000000000000 --delete just this plan, works in Azure SQL or SQL 2016+
 
 */
 /*
@@ -93,8 +90,8 @@ DBCC FREEPROCCACHE
 
 USE [tempdb]
 GO
-DROP TABLE IF EXISTS [dbo].[worstqueries]
-CREATE TABLE [dbo].[worstqueries](
+DROP TABLE IF EXISTS [dbo].[worstqueryplans]
+CREATE TABLE [dbo].[worstqueryplans](
 	[CpuRank] [bigint] NULL,
 	[PhysicalReadsRank] [bigint] NULL,
 	[DurationRank] [bigint] NULL,
@@ -115,7 +112,7 @@ CREATE TABLE [dbo].[worstqueries](
 	[QueryPlan] [xml] NULL,
 	[Average_cpu] [decimal](38, 19) NULL,
 	[Average_Duration] [decimal](38, 19) NULL,
-	[ObservedWhen] [datetimeoffset] NOT NULL CONSTRAINT DF_worstqueries_ObservedWhen DEFAULT (SYSDATETIMEOFFSET())
+	[ObservedWhen] [datetimeoffset] NOT NULL CONSTRAINT DF_worstqueryplans_ObservedWhen DEFAULT (SYSDATETIMEOFFSET())
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
