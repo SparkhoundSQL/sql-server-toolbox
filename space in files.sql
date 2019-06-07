@@ -21,8 +21,10 @@ DECLARE @TempTable TABLE
 
 INSERT INTO @TempTable
 exec sp_MSforeachdb  'use [?]; 
-select *,
-growTSQL = ''ALTER DATABASE [''+DatabaseName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS+''] 
+select *
+, shrinkTSQL	=	''USE [?];
+DBCC SHRINKFILE (N''''''+ DatabaseName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS +'''''' , 0, TRUNCATEONLY)''
+, growTSQL = ''ALTER DATABASE [''+DatabaseName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS+''] 
 MODIFY FILE ( NAME = N''''''+DatabaseFileName_______ COLLATE SQL_Latin1_General_CP1_CI_AS +''''''
 , '' + CASE WHEN FileSizeMB < 100 THEN ''SIZE = ''+STR(FileSizeMB+64)
 			WHEN FileSizeMB < 1000 THEN ''SIZE = ''+STR(FileSizeMB+256)
@@ -41,8 +43,7 @@ SELECT
 , SpaceUsedMB		= CAST(CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0 as Decimal(9,2))
 , AvailableMB		= CAST(size/128.0 - CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0 as Decimal(9,2))
 , FreePercent		= CAST((((size/128.0) - (CAST(FILEPROPERTY(df.name, ''SpaceUsed'') AS int)/128.0)) / (size/128.0) ) * 100. as Decimal(9,2))
-, shrinkTSQL	=	''USE [?];
-DBCC SHRINKFILE (N''+ df.name COLLATE SQL_Latin1_General_CP1_CI_AS +'' , 0, TRUNCATEONLY)''
+
  FROM sys.database_files df
  CROSS APPLY sys.databases d
  WHERE d.database_id = DB_ID() 
@@ -56,4 +57,7 @@ FROM @TempTable
 --where [FreePercent] < 5  and FileSizeMB > 6 --Optional filter for small/unused databases 
 
 ORDER BY FreePercent asc, DatabaseName, FileId
+
+
+
 
