@@ -27,8 +27,8 @@ from sys.dm_os_performance_counters
 --This only looks at one NUMA node. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
 )  as p
 inner join (select 'InstanceName' = @@SERVERNAME, Version = @@VERSION, 
-			min_Server_Mem_MB  = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end) ,
-			max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
+			Min_Server_Mem_MB  = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end) ,
+			Max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
 			from sys.configurations) as c on p.InstanceName = c.InstanceName
 inner join (SELECT 'InstanceName' = @@SERVERNAME 
 			, cpu_count , hyperthread_ratio AS 'HyperthreadRatio',
