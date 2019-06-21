@@ -2,23 +2,26 @@
 --Snapshot
 SELECT 
 	dbname			=	db_name(a.database_id)
-,	io_stall_s		=	(a.io_stall)/60.
+,	logical_file_name = mf.name
+,	db_file_type	=	mf.Type_desc 
+,	io_stall_s		=	cast((a.io_stall)/60. as decimal(19,2))
 ,	a.io_stall_read_ms
 ,	a.io_stall_write_ms
 ,	num_of_reads	=	(a.num_of_reads)
 ,	num_of_writes	=	(a.num_of_writes)
 ,	MB_read		=	( convert(decimal(19,2),( ( a.num_of_bytes_read/ 1024. ) / 1024.  ) )) 
 ,	MB_written	=	( convert(decimal(19,2),( ( a.num_of_bytes_written/ 1024. ) / 1024.  ) )) 
-,	a.io_stall_write_ms
 ,	MB_size_on_disk	=	( convert(decimal(19,2),( ( a.size_on_disk_bytes/ 1024. ) / 1024.  ) ))
 ,	mf.name
 ,	a.file_id
-,	db_file_type	=	mf.Type_desc 
-,	disk_location	=	UPPER(SUBSTRING(mf.physical_name, 1, 2)) 
+,	disk_location	=	mf.physical_name
+
 FROM sys.dm_io_virtual_file_stats (NULL, NULL) a 
 INNER JOIN sys.master_files mf ON a.file_id = mf.file_id 
 AND a.database_id = mf.database_id 
-ORDER BY a.database_id ASC
+--ORDER BY a.database_id ASC --database list
+--ORDER BY io_stall_write_ms desc, io_stall_read_ms desc --io stall info
+ORDER BY MB_written desc, MB_read desc --activity level
 
 
 /*
@@ -65,7 +68,7 @@ INNER JOIN sys.master_files mf ON a.file_id = mf.file_id
 AND a.database_id = mf.database_id 
 GROUP BY  a.sample_ms, a.database_id 
 ORDER BY a.database_id ASC
-*/
+
 
 --Latest Two Samples
 ;WITH cteVFS (dbname, sample_ms, sampleset, SampleStart)
@@ -132,3 +135,5 @@ WHERE Sampleset = 1 OR SampleSet = (SELECT MAX(SampleSet) FROM cteVFS)
 select dbname,io_stall_s,num_of_reads,num_of_writes,MB_read,MB_written,MB_size_on_disk, SampleTime_Min, SampleStart, SampleEnd
 from cteVFS2 where sampleset = 1
 ORDER BY MB_read + MB_Written desc
+
+*/
