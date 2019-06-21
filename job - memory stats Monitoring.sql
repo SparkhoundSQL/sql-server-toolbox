@@ -93,8 +93,8 @@ cross apply (SELECT 'InstanceName' = @@SERVERNAME
 		, 'Server Physical Mem (MB)' = cast(physical_memory_kb/1024. as decimal(19,2))   -- SQL2012+ only
 		FROM sys.dm_os_sys_info ) as os
 cross apply (select  
-	  min_Server_Mem_MB = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end) 
-	, max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
+	  Min_Server_Mem_MB = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end) 
+	, Max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
 from sys.configurations) as c 
 
 END;
