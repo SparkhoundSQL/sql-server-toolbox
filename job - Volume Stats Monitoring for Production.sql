@@ -34,7 +34,7 @@ GO
 --Create Sproc
 
 CREATE PROCEDURE [dbo].[Get_VolumeStats]
---@Threshold decimal(9,2) --removed CLL 20190329
+@Threshold decimal(19,2) --re-enabled by WFC 06212019
 AS
 BEGIN
 --Changed all floats and decimal(18,2) to decimal(19,2) - WDA 20170312
