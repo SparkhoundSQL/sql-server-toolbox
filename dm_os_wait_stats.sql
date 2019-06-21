@@ -1,6 +1,12 @@
 --Aggregate waits stats since last server startup
 --See FROM switch for Azure SQL DB (defaulted to SQL Server)
 
+/*
+dm_os_wait_stats.sql  - Aggregate Wait Data
+dm_os_waiting_tasks.sql – Live Session-level Wait Data
+dm_exec_session_wait_stats.sql – Aggregate Session-level Wait Data
+*/
+
 SELECT 
 	wait_type
 ,	wait_time_s				=	wait_time_ms / 1000 
