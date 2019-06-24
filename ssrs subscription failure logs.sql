@@ -8,6 +8,8 @@ select top 1000 * from ReportServer.dbo.ExecutionLog3 where status <> 'rsSuccess
 --https://docs.microsoft.com/en-us/sql/reporting-services/troubleshooting/troubleshoot-reporting-services-subscriptions-and-delivery?view=sql-server-2017
 --C:\Program Files\Microsoft SQL Server\instance.mssqlserver\Reporting Services\LogFiles\ReportServerService_<timestamp>.log
 --C:\Program Files\Microsoft SQL Server\instance.mssqlserver\Reporting Services\LogFiles\Microsoft.ReportingServices.Portal.WebHost_<timestamp>.log
+--or
+--C:\Program Files\Microsoft SQL Server Reporting Services\SSRS\LogFiles
 
 --5. Query below for subscription statuses:
 use ReportServer
