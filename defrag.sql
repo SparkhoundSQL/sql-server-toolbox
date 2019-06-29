@@ -1,7 +1,8 @@
 --BEWARE running this script on production can harm performance by hammering IO.
---Run in each database
+--Run in each database, shows data per table. 
 
---Using ALTER INDEX ALL as in this example isn't efficient. This script averages fragmentation for all indexes/partitions on a table. Instead, consider index-level or index-partition-level REBUILDs.
+--Using ALTER INDEX ALL as in this example isn't efficient. 
+--This script averages fragmentation for all indexes/partitions on a table. Instead, consider index-level or index+partition-level REBUILDs.
 
 --See also \toolbox\automated index rebuild.sql
 --See also \toolbox\defrag columnstore.sql
@@ -11,18 +12,18 @@
 --	WITH (MAXDOP = 1, ONLINE = ON);
 
 SELECT DISTINCT
-	SQL_Reorg				= 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REORGANIZE; 
-								UPDATE STATISTICS ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name]  + ';'
-,	SQL_Rebuild				= 'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REBUILD WITH (ONLINE = ON, SORT_IN_TEMPDB = ON);'  
-,	max_fragmentation_pct	=	MAX(avg_fragmentation_pct) -- Use the highest amount of fragmentation we find in any index on a table.
-,	avg_fragmentation_pct	=	AVG(avg_fragmentation_pct) -- Use the avg amount of fragmentation we find across all indexes 
-,	page_count				=	SUM(page_count)
-,	number_of_indexes		= COUNT(index_id) 
+	SQL_Reorg					=	'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REORGANIZE; 
+										UPDATE STATISTICS ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name]  + ';'
+,	SQL_Rebuild					=	'ALTER INDEX ALL ON ' + x.DB + '.' + x.[schema_name] + '.' + x.[table_name] + ' REBUILD WITH (ONLINE = ON, SORT_IN_TEMPDB = ON);'  
+,	max_fragmentation_pct		=	MAX(avg_fragmentation_pct) -- Use the highest amount of fragmentation we find in any index on a table.
+,	avg_fragmentation_pct		=	AVG(avg_fragmentation_pct) -- Use the avg amount of fragmentation we find across all indexes 
+,	page_count					=	SUM(page_count)
+,	number_of_indexes			=	COUNT(index_id) 
 FROM (	SELECT 
-		  DB = db_name(s.database_id)
-		, [schema_name] = sc.name
-		, [table_name] = o.name
-		, index_name = i.name
+		  DB					= db_name(s.database_id)
+		, [schema_name]			= sc.name
+		, [table_name]			= o.name
+		, index_name			= i.name
 		, s.index_type_desc
 		, s.partition_number
 		, avg_fragmentation_pct = s.avg_fragmentation_in_percent
