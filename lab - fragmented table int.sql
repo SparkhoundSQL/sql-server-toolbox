@@ -14,10 +14,18 @@ ALTER TABLE dbo.fragmented_table_int ADD CONSTRAINT
 	PK_fragmented_table_int PRIMARY KEY CLUSTERED 
 	(
 	fragid
-	) WITH(FILLFACTOR =100)
+	) 
+	 WITH (SORT_IN_TEMPDB = ON
+	--, OPTIMIZE_FOR_SEQUENTIAL_KEY = ON --SQL 2019 only!
+	)
+
 go
 CREATE NONCLUSTERED INDEX IDX_NC_fragmented_table_int
-ON dbo.fragmented_table_int (FRAGTEXT) WITH(FILLFACTOR =100)
+ON dbo.fragmented_table_int (FRAGTEXT) 
+ WITH (SORT_IN_TEMPDB = ON
+	--, OPTIMIZE_FOR_SEQUENTIAL_KEY = ON --SQL 2019 only!
+	)
+
 GO
 
 
