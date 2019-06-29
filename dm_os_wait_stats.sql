@@ -11,6 +11,8 @@ SELECT
 	wait_type
 ,	wait_time_s				=	wait_time_ms / 1000 
 ,	Pct						=	100 * wait_time_ms/sum(wait_time_ms) OVER()
+,	avg_ms_per_wait			=	wait_time_ms / waiting_tasks_count
+,	waiting_tasks_count
 FROM 
 	(SELECT *, pcttile = NTILE(20) OVER (ORDER BY wait_time_ms desc) 
 	FROM 
