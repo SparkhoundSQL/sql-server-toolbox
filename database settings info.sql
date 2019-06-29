@@ -39,7 +39,7 @@ select
 ,	[Alter]					= CASE WHEN Up_To_Date is not null THEN 'ALTER DATABASE [' + Database_Name +'] SET COMPATIBILITY_LEVEL = ' + LEFT(convert(varchar(15), SERVERPROPERTY('ProductVersion')),2) + '0;' ELSE NULL END
 ,	[Revert]				= CASE WHEN Up_To_Date is not null THEN 'ALTER DATABASE [' + Database_Name +'] SET COMPATIBILITY_LEVEL = ' + convert(char(3), [compatibility_level]) + ';' ELSE NULL END
 from cteDB
-WHERE Up_to_Date is not null
+WHERE Up_To_Date is not null
 order by [Database_Name];
 
 --Databases where page verify option is not CHECKSUM
