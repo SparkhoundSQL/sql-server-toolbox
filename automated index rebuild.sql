@@ -514,4 +514,14 @@ alter column EndTimeStamp	datetimeoffset(2)  null
 
 select * from DBALogging.dbo.IndexMaintLog
 
+--To convert data to proper time zone:
+
+update dbaadmin.dbo.IndexMaintLog
+set
+ BeginTimeStamp = dateadd(hh, +4, BeginTimeStamp  AT TIME ZONE 'Eastern Standard Time') --TODO: Check correct time zone!
+, EndTimeStamp = dateadd(hh, +4, BeginTimeStamp  AT TIME ZONE 'Eastern Standard Time') --TODO: Check correct time zone!
+--, duration_s = duration_s - (4*60*60)
+
+
+
 */
