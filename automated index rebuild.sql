@@ -5,7 +5,7 @@
 */
 
 --#TODO 
---1. Check the name of the DBALogging/DBALogging/DBAAdmin database local to this SQL instance
+--1. Check the name of the DBALogging/DBAAdmin/DBAHound database local to this SQL instance
 --2. Change @StartWindow and @EndWindow values as desired.
 --3. Set the job step database context correctly - this script doesn't have a USE
 --4. If upgrading this script, look at the bottom - we changed the timestamp field data types to datetimeoffset and we need to update the logging table.
@@ -15,7 +15,6 @@
 --Change name in ALTER ... BULK_LOGGED below if desired to use this. Change name in ALTER ... FULL near end if desired to use this. Commented out by default because this isn't feasible in many situations. 
 --Enable @CompressWhenPossible to start enabling data_compression = PAGE everywhere. Not recommended without testing.
 
-GO
 DECLARE @TestMode		bit
 DECLARE @StartWindow	tinyint
 DECLARE @EndWindow		tinyint
@@ -23,7 +22,7 @@ DECLARE @CompressWhenPossible  bit
 
 SELECT @TestMode	 =	1	-- TODO: flip to 1 to run out of cycle, without actually executing any code.
 SELECT @StartWindow	 =	1	-- 1AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
-SELECT @EndWindow	 =	5	-- 5AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
+SELECT @EndWindow	 =	12	-- 5AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 SELECT @CompressWhenPossible = 0 -- 0 = Don't introduce new compression on indexes. 1= Compress when possible, even currently uncompressed databases.
 
 IF @TestMode = 1 PRINT 'Test mode is ON'
@@ -62,6 +61,7 @@ BEGIN TRY
 		, @Can_Compress bit
 		, @ProductVersion varchar(15)
 	    , @ServerEdition varchar(30)
+		, @type_desc sysname 
 
        SET @ServerEdition = convert(varchar(30),(SELECT SERVERPROPERTY('Edition')))
 	   SET @ProductVersion = convert(varchar(15),(SELECT SERVERPROPERTY('ProductVersion')))
@@ -79,7 +79,8 @@ BEGIN TRY
 		, Can_Reorg			bit		NOT NULL
 		, Can_RebuildOnline	bit		NOT NULL
 		, Can_Compress		bit		NOT NULL
-		, indexname			sysname	NOT NULL,
+		, indexname			sysname	NOT NULL
+		, [type_desc]		sysname NOT NULL,
 
 		PRIMARY KEY (  objectid, indexid, partitionnum	)
 		)
@@ -94,13 +95,14 @@ BEGIN TRY
 		, Can_RebuildOnline	
 		, Can_Compress
 		, indexname			
+		, [type_desc]
 		)
 			SELECT  
 					objectid			=	s.object_id
 				,	indexid				=	s.index_id
 				,	partitionnum		=	s.partition_number
 				,	frag				=	max(s.avg_fragmentation_in_percent)
-				,	Can_Reorg			=	i.allow_page_locks --An index cannot be reorganized when allow_page_locks is set to 0.
+				,	Can_Reorg			=	CASE WHEN i.type_desc like '%columnstore%' THEN 1 ELSE i.allow_page_locks END --An index cannot be reorganized when allow_page_locks is set to 0.
 				,	Can_RebuildOnline	=	
 						CASE 
 							WHEN A.index_id is not null and A.user_type_id is not null 
@@ -108,6 +110,7 @@ BEGIN TRY
 							WHEN A.index_id is null and s.index_id <= 1 and A.user_type_id is not null 
 								THEN 0 -- Cannot do ONLINE REBUILDs with certain data types in the index (key or INCLUDE).
 							WHEN i.type_desc in ('xml','spatial') THEN 0 -- Cannot do ONLINE REBUILDs for certain index types.
+							WHEN i.type_desc like '%columnstore%' THEN 0 -- cannot rebuild columnstores
 							WHEN (left(@ProductVersion,2) >= 10 ) and (@ServerEdition like 'Developer%' or @ServerEdition like 'Enterprise%' )
 								THEN 1
 							ELSE 0
@@ -119,6 +122,7 @@ BEGIN TRY
 											ELSE 0
 										END
 				,	indexname		=	i.name --select object_name(object_id), * 
+				,	i.[type_desc]
 			FROM sys.indexes i 
 			cross apply 
 			sys.dm_db_index_physical_stats (DB_ID(), i.object_id, i.index_id , NULL, 'LIMITED') s
@@ -173,7 +177,7 @@ BEGIN TRY
 		-- Loop through the partitions.
 		FETCH NEXT
 		   FROM curIndexPartitions
-		   INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname;
+		   INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname, @type_desc;
 
 		WHILE @@FETCH_STATUS = 0
 			BEGIN
@@ -212,7 +216,7 @@ BEGIN TRY
 								SELECT @Command = '';
 
 								-- 30 is an arbitrary decision point at which to switch between reorganizing and rebuilding
-								IF @frag > 30.0 and @Can_Reorg = 1
+								IF @frag > 20.0 and @Can_Reorg = 1
 									BEGIN
 						
 										IF @TestMode = 1 print '30%+ reorg'
@@ -222,18 +226,19 @@ BEGIN TRY
 							
 										IF @partitioncount > 1
 											SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
-								
+										
+										IF @type_desc not like '%columnstore%'
 										SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
 							
 									END
 						
-								IF @frag >= 60.0
+								IF @frag >= 50.0
 									BEGIN
 							
 										--Doing an INDEX REBUILD with ONLINE = ON reduces the impact of locking to the production server, 
 										--	though it will still create resource contention by keeping the drives and tempdb busy.
 										--  Unlike REORGANIZE steps, a REBUILD also updates the STATISTICS of an index.
-										IF @Can_RebuildOnline = 1
+										IF @Can_RebuildOnline = 1 and @type_desc not like '%columnstore%'
 										BEGIN
 											IF @TestMode = 1 print '60%+ rebuild online'
 							
@@ -261,6 +266,7 @@ BEGIN TRY
 											IF @partitioncount > 1
 												SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
 								
+											IF @type_desc not like '%columnstore%'
 											SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
 								
 										END
@@ -313,7 +319,7 @@ BEGIN TRY
 				END CATCH
 
 			FETCH NEXT FROM curIndexPartitions 
-				INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname;
+				INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname, @type_desc;
 			END
 
 		-- Close and deallocate the cursor.
