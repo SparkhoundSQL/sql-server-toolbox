@@ -1,31 +1,33 @@
-/* Automated index maint script
---Primary objective is to never perform an offline index rebuild unless it is the only option, and desired. This is commented out by default.
+/* 
+Automated index maint script
 
---Note recent data type changes to the IndexMaintLog table, if it already exists. See comment block at bottom.
+Primary objective is to never perform an offline index rebuild unless it is the only option, and desired. This is commented out by default.
+Loops past errors, throws an error at the end if any errors were recorded.
+
+IMPORTANT: When scheduling in a SQL Agent job, with each database as a job step, set each job step to go to the next step on failure.
+
+#TODO 
+1. Check the name of the DBALogging/DBAAdmin/DBAHound database local to this SQL instance and replace.
+2. Change @StartWindow and @EndWindow values as desired.
+3. Set the job step database context correctly - this script doesn't have a USE. For example, in the database property of the SQL Agent job step.
+4. If upgrading this script, look at the bottom - we changed the timestamp field data types to datetimeoffset and we need to update the logging table. Note recent data type changes to the IndexMaintLog table, if it already exists. See comment block at bottom, including a conversion from old datetime to datetimeoffset data.
+5. IMPORTANT! Change @TestMode variable to 0 when ready for production
+
+#Optional TODO's
+Change name in ALTER ... BULK_LOGGED below if desired to use this. Change name in ALTER ... FULL near end if desired to use this. Commented out by default because this isn't feasible in many situations. 
+Enable @CompressWhenPossible to start enabling data_compression = PAGE everywhere. Not recommended without testing.
 */
 
---#TODO 
---1. Check the name of the DBALogging/DBAAdmin/DBAHound database local to this SQL instance
---2. Change @StartWindow and @EndWindow values as desired.
---3. Set the job step database context correctly - this script doesn't have a USE
---4. If upgrading this script, look at the bottom - we changed the timestamp field data types to datetimeoffset and we need to update the logging table.
---5. IMPORTANT! Change @TestMode variable to 0 when ready for production
-
---#Optional TODO's
---Change name in ALTER ... BULK_LOGGED below if desired to use this. Change name in ALTER ... FULL near end if desired to use this. Commented out by default because this isn't feasible in many situations. 
---Enable @CompressWhenPossible to start enabling data_compression = PAGE everywhere. Not recommended without testing.
-
-DECLARE @TestMode		bit
-DECLARE @StartWindow	tinyint
-DECLARE @EndWindow		tinyint
-DECLARE @CompressWhenPossible  bit 
-
-SELECT @TestMode	 =	1	-- TODO: flip to 1 to run out of cycle, without actually executing any code.
+DECLARE @TestMode		bit, @StartWindow	tinyint, @EndWindow		tinyint, @CompressWhenPossible  bit 
+SELECT @TestMode	 =	0	-- TODO: flip to 1 to run out of cycle, without actually executing any code.
 SELECT @StartWindow	 =	1	-- 1AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
-SELECT @EndWindow	 =	12	-- 5AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
+SELECT @EndWindow	 =	5	-- 5AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 SELECT @CompressWhenPossible = 0 -- 0 = Don't introduce new compression on indexes. 1= Compress when possible, even currently uncompressed databases.
 
 IF @TestMode = 1 PRINT 'Test mode is ON'
+
+DECLARE @maxlogid int  --used later on to throw an error if the loop encountered errors at any point
+SELECT @maxlogid = ISNULL(MAX(id),0) From DBALogging.dbo.IndexMaintLog
 
 SET XACT_ABORT ON;
 
@@ -293,7 +295,7 @@ BEGIN TRY
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
-										IF @TestMode = 1 PRINT N'Executed:  ' + @Command + ' Frag level: ' + str(@frag)
+										IF @TestMode = 1 PRINT N'Executed:  ' + @Command + ' Frag level: ' + cast(@frag as varchar(10))
 										UPDATE DBALogging.dbo.IndexMaintLog 
 										SET EndTimeStamp = sysdatetimeoffset()
 										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
@@ -303,13 +305,11 @@ BEGIN TRY
 									BEGIN CATCH
 										IF @TestMode = 1 Print N'Error: ' + ERROR_MESSAGE()
 										UPDATE DBALogging.dbo.IndexMaintLog 
-										SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
+										SET ErrorMessage = cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE()
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
 									END CATCH
 	
 								END
-
-
 
 						END --End Time frame
 						
@@ -454,7 +454,7 @@ BEGIN TRY
 						BEGIN CATCH
 							IF @TestMode = 1 Print N'Error: ' + ERROR_MESSAGE()
 							UPDATE DBALogging.dbo.IndexMaintLog 
-							SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
+							SET ErrorMessage = cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE()
 							WHERE id = SCOPE_IDENTITY() and EndTimeStamp is null
 						END CATCH
 
@@ -473,7 +473,7 @@ BEGIN TRY
 	BEGIN CATCH
 		IF @TestMode = 1 PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
 		INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
-		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
+		SELECT DB_NAME(), cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
 		
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
 		DROP TABLE #C__work_to_do;
@@ -487,6 +487,15 @@ BEGIN TRY
 	END CATCH
 
 	IF @TestMode = 1 PRINT 'Done'
+
+	IF @TestMode = 0 AND EXISTS (SELECT 1 from DBALogging.dbo.IndexMaintLog where id > @maxlogid and ErrorMessage is not null)
+		BEGIN
+			DECLARE @errorcount int, @errormessage varchar(1000);
+			SELECT @errorcount = count(ErrorMessage) from DBALogging.dbo.IndexMaintLog where id > @maxlogid and ErrorMessage is not null
+			SELECT @errormessage = cast(@errorcount as varchar(100)) + ' error(s) detected while performing index maintainence. Review the findings in table: SELECT * FROM DBALogging.dbo.IndexMaintLog where id > '+ cast(@maxlogid as varchar(100));
+			THROW 51000, @errormessage,0; --This is the only error that will rise to the SQL Agent Job.
+		END
+	
 GO
 
 /*
