@@ -1,15 +1,18 @@
+/*
+Default log retention is 180 days. For frequently-running SSIS packages, this could generate 100Gb+ data in months
+But changing the log retention time frame drastically could cause the built-in sprocs to try and delete 100Gb+ at once
+Instead, step down the retention in small chunks. This could still take HOURS to complete and block other SSIS jobs
+  from logging, so recommended to create a maintainence window and stop SSISDB jobs from executing. 
+The script calls two stored procedure which are called by the SQL Agent job [SSIS Server Maintenance Job] at midnight by default.
+
+FYI: a bug in [internal].[cleanup_server_retention_window] may prevent some large deletes from succeeding. 
+You'll see error message:  "A cursor with the name 'execution_cursor' does not exist. [SQLSTATE 34000] (Error 16916)."
+More info: https://feedback.azure.com/forums/908035-sql-server/suggestions/37360864-ssis-server-maintenance-job-fails
+Fixed version is in comment block below. Careful!
+
+*/
 USE ssisdb
 GO
---default log retention is 180 days. For frequently-running SSIS packagse, this could generate 100Gb+ data in months
---But changing the log retention time frame drastically could cause the built-in sprocs to try and delete 100Gb+ at once
---Instead, step down the retention in small chunks. This could still take HOURS to complete and block other SSIS jobs
---  from logging, so recommended to create a maintainence window and stop SSISDB jobs from executing. 
-
---FYI: a bug in [internal].[cleanup_server_retention_window] prevents large deletes from succeeding. 
---You'll see error message:  "A cursor with the name 'execution_cursor' does not exist. [SQLSTATE 34000] (Error 16916)."
---More info: https://feedback.azure.com/forums/908035-sql-server/suggestions/37360864-ssis-server-maintenance-job-fails
---Fixed version is in comment block below. Careful!
-
 
 declare @current int, @desired int 
 
@@ -30,12 +33,15 @@ BEGIN
 END
 
 /*
---bugfix
+--Potential needed bugfix for SQL 2017 
+--don't copy-replace this, it might be different on your version of SQL!
+--Look for the comment below "This line moved"
+
 USE [SSISDB]
 GO
  
 
-ALTER PROCEDURE [internal].[cleanup_server_retention_window]
+CREATE PROCEDURE [internal].[cleanup_server_retention_window]
 WITH EXECUTE AS 'AllSchemaOwner'
 AS
     SET NOCOUNT ON
@@ -202,7 +208,7 @@ AS
             CLOSE execution_cursor
                     TRUNCATE TABLE #deleted_ops
                END
-            DEALLOCATE execution_cursor
+            DEALLOCATE execution_cursor --This line moved
                 DROP TABLE #deleted_ops
             END
             
