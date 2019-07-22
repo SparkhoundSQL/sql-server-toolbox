@@ -148,6 +148,9 @@ and LogMessageText not like ''Error: 17810, Severity: 20%''
 and LogMessageText not like ''READ UNCOMMITTED%''
 and LogMessageText not like ''Error: 7886, Severity: 20%''
 
+and LogMessageText not like ''%Windows return code: 0x2098, state: 15. Failure to register a SPN might cause integrated authentication to use NTLM instead of Kerberos%''
+and LogMessageText not like ''Server The SQL Server Network Interface library could not register the Service Principal Name (SPN)%''
+
 )
 order by LogDate
 
