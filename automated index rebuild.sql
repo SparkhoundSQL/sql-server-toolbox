@@ -107,9 +107,7 @@ BEGIN TRY
 				,	Can_Reorg			=	CASE WHEN i.type_desc like '%columnstore%' THEN 1 ELSE i.allow_page_locks END --An index cannot be reorganized when allow_page_locks is set to 0.
 				,	Can_RebuildOnline	=	
 						CASE 
-							WHEN A.index_id is not null and A.user_type_id is not null 
-								THEN 0 -- Cannot do ONLINE REBUILDs with certain data types in the index (key or INCLUDE).
-							WHEN A.index_id is null and s.index_id <= 1 and A.user_type_id is not null 
+							WHEN A.user_type_id is not null 
 								THEN 0 -- Cannot do ONLINE REBUILDs with certain data types in the index (key or INCLUDE).
 							WHEN i.type_desc in ('xml','spatial') THEN 0 -- Cannot do ONLINE REBUILDs for certain index types.
 							WHEN i.type_desc like '%columnstore%' THEN 0 -- cannot rebuild columnstores
@@ -131,8 +129,10 @@ BEGIN TRY
 			left outer join 
 			(
 				select 
-					c.object_id, ic.index_id, user_type_id = COALESCE(t.user_type_id, null)
+					c.object_id, index_id = ISNULL(ic.index_id, i.index_id), user_type_id = COALESCE(t.user_type_id, null)
 				from sys.columns c
+				left outer join sys.indexes i 
+				on c.object_id = i.object_id and i.index_id <= 1 --need the heap or clustered index to be returned here, because all columns are included in the heap or clustered index
 				left outer join sys.index_columns ic
 				on ic.object_id = c.object_id
 				and ic.column_id = c.column_id 
@@ -168,11 +168,13 @@ BEGIN TRY
 		 	CLOSE curIndexPartitions;
 			DEALLOCATE curIndexPartitions;
 		END
-		
+
+
 		-- Declare the cursor for the list of partitions to be processed.
 		DECLARE curIndexPartitions CURSOR LOCAL FAST_FORWARD FOR 
 		SELECT * FROM #C__work_to_do;
-		
+
+
 		-- Open the cursor.
 		OPEN curIndexPartitions;
 
@@ -521,7 +523,6 @@ alter column BeginTimeStamp	datetimeoffset(2)  null
 alter table DBALogging.dbo.IndexMaintLog
 alter column EndTimeStamp	datetimeoffset(2)  null 
 
-select * from DBALogging.dbo.IndexMaintLog
 
 --To convert data to proper time zone:
 
@@ -530,7 +531,5 @@ set
  BeginTimeStamp = dateadd(hh, +4, BeginTimeStamp  AT TIME ZONE 'Eastern Standard Time') --TODO: Check correct time zone!
 , EndTimeStamp = dateadd(hh, +4, BeginTimeStamp  AT TIME ZONE 'Eastern Standard Time') --TODO: Check correct time zone!
 --, duration_s = duration_s - (4*60*60)
-
-
 
 */
