@@ -11,7 +11,7 @@ insert into dbo.string_truncation_test (tenchars)
 values 
 ('123456789')
 ,('1234567890')
---,('12345678901') --note the error message here! Displays only 10 chars of data, after being limited by data type's truncation. 
+,('12345678901') --note the error message here! Displays only 10 chars of data, after being limited by data type's truncation. 
 /*
 Msg 2628, Level 16, State 1, Line 10
 String or binary data would be truncated in table 'tempdb.dbo.string_truncation_test', column 'tenchars'. Truncated value: '1234567890'.
@@ -79,8 +79,7 @@ GO
 CREATE TABLE dbo.decimal_truncate_test
 ( id int not null identity(1,1) CONSTRAINT PK_datetime2_truncate_test PRIMARY KEY 
 , decimal92 decimal(9,2) not null
-)
-select SYSDATETIME()
+) 
 insert into dbo.decimal_truncate_test (decimal92)
 values 
  ('123456.78')   
@@ -95,7 +94,6 @@ CREATE TABLE dbo.datetime2_truncate_test
 ( id int not null identity(1,1) CONSTRAINT PK_datetime2_truncate_test PRIMARY KEY 
 , dt2_5 datetime2(5) not null
 )
-select SYSDATETIME()
 insert into dbo.datetime2_truncate_test (dt2_5)
 values 
  ('2019-07-22 11:34:56.1234')
