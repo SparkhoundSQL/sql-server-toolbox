@@ -474,9 +474,14 @@ BEGIN TRY
 	END TRY
 	BEGIN CATCH
 		IF @TestMode = 1 PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
-		INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
-		SELECT DB_NAME(), cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
-		
+
+		IF ERROR_NUMBER() <> 51000 --detect a user-defined short-circuit above, for an offline database or a secondary replica, for example. This should not cause the job to fail.
+		BEGIN
+			--Write a record to the logging table, while we'll use below to THROW an error and cause the job to fail if >=1 errors are found.
+			INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
+			SELECT DB_NAME(), cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
+		END
+
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
 		DROP TABLE #C__work_to_do;
 
