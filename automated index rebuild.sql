@@ -294,6 +294,9 @@ BEGIN TRY
 									INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
 									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @SchemaName + '].[' + @ObjectName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
 									
+									SELECT @Command = 'SET QUOTED_IDENTIFIER ON;
+									' + @Command --for a specific issue that can cause some rebuild operations to fail if this is OFF. ON is default.
+									
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
