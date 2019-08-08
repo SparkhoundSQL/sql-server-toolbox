@@ -26,6 +26,8 @@ $EventLog_Security = Get-EventLog -LogName "Security" -After (Get-Date).AddDays(
 
 clear-host
  $numDays = -30
+ $timestamp = Get-Date -Format "FileDateTime"
+ $exportpath = "C:\temp\"+$env:computername+" log export " +$timestamp+".csv"
 $eventLog_Application = @()
 Get-EventLog -LogName "Application" -After (Get-Date).AddDays($numDays) | 
     Where-Object {$_.EntryType -match "Error" -or "Critical" -or "Warning"} | 
@@ -69,6 +71,6 @@ Get-EventLog -LogName "Security" -After (Get-Date).AddDays($numDays) |
     $obj.Message = $latestMessage.Message
     $eventLog_Application += $obj
     }
-$eventLog_Application  | Sort-Object -Property Count, Latest -Descending  | Export-Csv -Path "C:\temp\export.csv" -Encoding ascii -NoTypeInformation
+$eventLog_Application  | Sort-Object -Property Count, Latest -Descending  | Export-Csv -Path $exportpath -Encoding ascii -NoTypeInformation
 
 
