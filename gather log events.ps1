@@ -28,7 +28,7 @@ $EventLog_Security = Get-EventLog -LogName "Security" -After (Get-Date).AddDays(
 
 clear-host
  $numDays = -30
- $timestamp = Get-Date -Format "FileDateTime"
+ $timestamp = Get-Date -Format u
  $exportpath = "C:\temp\"+$env:computername+" log export " +$timestamp+".csv"
 $eventLog_Application = @()
 Get-EventLog -LogName "Application" -After (Get-Date).AddDays($numDays) | 
