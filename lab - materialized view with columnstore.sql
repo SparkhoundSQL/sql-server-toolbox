@@ -67,7 +67,20 @@ set statistics time on
 set statistics io on 
 GO
 
-SELECT avg(number1), AVG(number2) FROM dbo.whateverview1 
+SELECT avg(number1), AVG(number2) 
+FROM dbo.whateverview1 --WITH (NOEXPAND) --With Enterprise edition of SQL or Azure SQL, explore the use of WITH (NOEXPAND), it may benefit performance greatly. It also may not be necessary.
+where number1 > 16 --columnstore index scan
+GO
+set statistics time off
+set statistics io off
+go
+
+set statistics time on 
+set statistics io on 
+GO
+
+SELECT avg(number1), AVG(number2) 
+FROM dbo.whateverview1 WITH (NOEXPAND) --With Enterprise edition of SQL or Azure SQL, explore the use of WITH (NOEXPAND), it may benefit performance greatly. It also may not be necessary.
 where number1 > 16 --columnstore index scan
 GO
 set statistics time off

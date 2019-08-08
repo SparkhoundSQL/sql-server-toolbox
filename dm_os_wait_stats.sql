@@ -3,15 +3,15 @@
 
 /*
 dm_os_wait_stats.sql  - Aggregate Wait Data
-dm_os_waiting_tasks.sql – Live Session-level Wait Data
-dm_exec_session_wait_stats.sql – Aggregate Session-level Wait Data
+dm_os_waiting_tasks.sql ï¿½ Live Session-level Wait Data
+dm_exec_session_wait_stats.sql ï¿½ Aggregate Session-level Wait Data
 */
 
 SELECT 
 	wait_type
 ,	wait_time_s				=	wait_time_ms / 1000 
 ,	Pct						=	100 * wait_time_ms/sum(wait_time_ms) OVER()
-,	avg_ms_per_wait			=	wait_time_ms / waiting_tasks_count
+,	avg_ms_per_wait			=	wait_time_ms / nullif(waiting_tasks_count,0)
 ,	waiting_tasks_count
 FROM 
 	(SELECT *, pcttile = NTILE(20) OVER (ORDER BY wait_time_ms desc) 
