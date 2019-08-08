@@ -1,5 +1,7 @@
-#Must launch PowerShell as an Administrator to read from the Security log
+#This script is intended to pull logs from a local server.
+#INSTEAD, consider "gather log events - remting.ps1" in the toolbox to pull these logs down using PowerShell Remoting.
 
+#Must launch PowerShell as an Administrator to read from the Security log
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted -Force
 
 <#
