@@ -43,7 +43,7 @@ Exit-PSSession
 #--------------------------------------------------------------------------------------
 
 ##Execute this block with F8 not F5
-$timestamp = Get-Date -Format u
+$timestamp = (Get-Date).ToString('yyyyMMddTHHmmss')
 $logtargetfile = "\\"+$target+"\C$\temp\"+$target+" log export.csv"
 $loglocalfile = "C:\temp\"+$target+" log export "+$timestamp+".csv"
 copy-item $logtargetfile $loglocalfile

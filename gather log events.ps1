@@ -27,8 +27,8 @@ $EventLog_Security = Get-EventLog -LogName "Security" -After (Get-Date).AddDays(
 ## Version that works on PowerShell 2.0 because of Add-Member and Out-Gridview dependencies aren't supported until 3.0
 
 clear-host
- $numDays = -30
- $timestamp = Get-Date -Format u
+ $numDays = -90
+ $timestamp = (Get-Date).ToString('yyyyMMddTHHmmss')
  $exportpath = "C:\temp\"+$env:computername+" log export " +$timestamp+".csv"
 $eventLog_Application = @()
 Get-EventLog -LogName "Application" -After (Get-Date).AddDays($numDays) | 
