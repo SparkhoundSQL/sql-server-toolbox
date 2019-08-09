@@ -4,6 +4,8 @@ select
 	, backuptype 
 	, d.recovery_model_desc
 	, BackupDate = MAX(BackupDate)
+	, d.state_desc
+	, d.is_read_only
  from sys.databases d
  inner join 
  (
@@ -36,7 +38,8 @@ select distinct
  ) a
  on db_name(d.database_id) = a.database_name
  where database_name not in ('model','tempdb')
- group by database_name, backuptype, d.recovery_model_desc
+ group by database_name, backuptype, d.recovery_model_desc, d.state_desc
+	, d.is_read_only
  having ( (max(backupdate) <= dateadd(day,-1,getdate()) and (max(backupdate) >= dateadd(month, -1, getdate())) ) or max(backupdate) is null)
 order by backuptype, recovery_model_desc, database_name asc
  
