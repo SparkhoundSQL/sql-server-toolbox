@@ -52,7 +52,8 @@ SELECT	DISTINCT
 ,	Role_Type					=	r.type_desc
 ,	Principal_Name				=	QUOTENAME(m.name)
 ,	Principal_Type				=	m.type_desc 
-,	SQL2008R2_below_CreateTSQL	=	'exec sp_addsrvrolemember  @loginame=  '''+m.name+''',  @rolename = '''+r.name+'''' 
+,	SQL2008R2_below_CreateTSQL	=	'exec sp_addsrvrolemember @loginame=  '''+m.name+''',  @rolename = '''+r.name+'''' 
+,	SQL2008R2_below_DropTSQL	=	'exec sp_dropsrvrolemember @loginame=  '''+m.name+''',  @rolename = '''+r.name+'''' 
 ,	SQL2012_above_CreateTSQL	=	'ALTER SERVER ROLE [' + r.name + '] ADD MEMBER [' + m.name + ']'
 ,	DropTSQL_Source				=	'ALTER SERVER ROLE [' + r.name + '] DROP MEMBER [' + m.name + ']'
 FROM	sys.server_role_members AS rm

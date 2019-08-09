@@ -7,8 +7,12 @@
 --Run on each database for database-level security.
 SELECT DB_NAME();
 SELECT DISTINCT	QUOTENAME(r.name) as database_role_name, r.type_desc, QUOTENAME(d.name) as principal_name, d.type_desc
-,	Add_TSQL = 'EXEC sp_addrolemember @membername = N''' + d.name COLLATE DATABASE_DEFAULT + ''', @rolename = N''' + r.name + ''''
-,	Drop_TSQL = 'EXEC sp_droprolemember @membername = N''' + d.name COLLATE DATABASE_DEFAULT + ''', @rolename = N''' + r.name + ''''
+,	SQL2012_ABOVE_CREATETSQL = 'ALTER SERVER ROLE [' + r.name COLLATE DATABASE_DEFAULT + '] ADD MEMBER [' + d.name COLLATE DATABASE_DEFAULT + ']'
+,	SQL2012_ABOVE_DROPTSQL = 'ALTER SERVER ROLE [' + r.name COLLATE DATABASE_DEFAULT + '] DROP MEMBER [' + d.name COLLATE DATABASE_DEFAULT + ']'
+
+,	SQL2008R2_BELOW_CREATETSQL = 'EXEC SP_ADDROLEMEMBER @membername = ''' + d.name COLLATE DATABASE_DEFAULT + ''', @ROLENAME = ''' + r.name COLLATE DATABASE_DEFAULT + '''' 
+,	SQL2008R2_BELOW_DROPTSQL = 'EXEC SP_DROPROLEMEMBER @membername = ''' + d.name COLLATE DATABASE_DEFAULT + ''', @ROLENAME = ''' + r.name COLLATE DATABASE_DEFAULT + '''' 
+
 FROM	sys.database_role_members rm
 inner join sys.database_principals r on rm.role_principal_id = r.principal_id
 inner join sys.database_principals d on rm.member_principal_id = d.principal_id
