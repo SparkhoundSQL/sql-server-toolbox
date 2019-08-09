@@ -13,6 +13,7 @@ select
 	, backup_size_mb			 = max(backup_size_mb)
 	, compressed_backup_size_mb	 = max(compressed_backup_size_mb)
 	, d.state_desc
+	, d.is_read_only
 	, d.create_date
  from sys.databases d
  inner join (	select * from (
@@ -60,7 +61,8 @@ group by
 	  a.database_name
 	, a.backuptype 
 	, d.recovery_model_desc
-	, d.state_desc 
+	, d.state_desc
+	, d.is_read_only
 	, d.create_date
 order by a.backuptype, d.recovery_model_desc, max(a.BackupFinishDate) asc, a.database_name asc
  go
