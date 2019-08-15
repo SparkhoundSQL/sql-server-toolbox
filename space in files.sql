@@ -23,7 +23,7 @@ INSERT INTO @TempTable
 exec sp_MSforeachdb  'use [?]; 
 select *
 , shrinkTSQL	=	''USE [?];
-DBCC SHRINKFILE (N''''''+ DatabaseName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS +'''''' , 0, TRUNCATEONLY)''
+DBCC SHRINKFILE (N''''''+ DatabaseFileName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS +'''''' , 0, TRUNCATEONLY)''
 , growTSQL = ''ALTER DATABASE [''+DatabaseName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS+''] 
 MODIFY FILE ( NAME = N''''''+DatabaseFileName_______ COLLATE SQL_Latin1_General_CP1_CI_AS +''''''
 , '' + CASE WHEN FileSizeMB < 100 THEN ''SIZE = ''+STR(FileSizeMB+64)
