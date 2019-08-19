@@ -81,9 +81,12 @@ into #BackupFailureFULL
 					  group by db_name(d.database_id)
  ) a
  on db_name(d.database_id) = a.database_name
- WHERE a.database_name not in ('tempdb', 'model') and
- d.state_desc ='ONLINE' and
- d.replicaid IS Null
+ WHERE a.database_name not in ('tempdb', 'model') 
+ and d.state_desc ='ONLINE' 
+ AND (		(backuptype <> 'Transaction Log' and d.recovery_model_desc = 'SIMPLE')
+		OR	(d.recovery_model_desc <> 'SIMPLE')
+	)
+ and  d.replica_id IS Null
 group by 
 	  a.database_name
 	, a.backuptype 
@@ -98,6 +101,7 @@ HAVING (MAX(a.BackupFinishDate) < DATEADD(DAY, -7, @TimeStampFULL) and backuptyp
 order by a.backuptype, d.recovery_model_desc, a.database_name asc;
 
 --Select for AG databases that are prefered replicas that fit the criteria for a gap in backup history
+INSERT into #BackupFailureFULL
 SELECT  
 	  a.database_name
 	, a.backuptype
@@ -105,7 +109,6 @@ SELECT
 	, LatestBackupDate = max(a.BackupFinishDate)
 	, LatestBackupLocation = max(a.physical_device_name)
 	, d.state_desc
-into #BackupFailureFULL
  from sys.databases d
  inner join (	select * from (
 						select  
@@ -145,10 +148,13 @@ into #BackupFailureFULL
 					  group by db_name(d.database_id)
  ) a
  on db_name(d.database_id) = a.database_name
- WHERE a.database_name not in ('tempdb', 'model') and
- d.state_desc ='ONLINE' and
- d.replica_id IS Not Null and
- (sys.fn_hadr_backup_is_preferred_replica (a.database_name) = 0) 
+ WHERE a.database_name not in ('tempdb', 'model') 
+ and d.state_desc ='ONLINE' 
+ and d.replica_id IS Not Null 
+ AND (		(backuptype <> 'Transaction Log' and d.recovery_model_desc = 'SIMPLE')
+		OR	(d.recovery_model_desc <> 'SIMPLE')
+ )
+ and  (sys.fn_hadr_backup_is_preferred_replica (a.database_name) = 0) 
 group by 
 	  a.database_name
 	, a.backuptype 
@@ -227,12 +233,9 @@ BEGIN
 	END
 	END
 ;
-
-
-
-
---exec dbo.BackupFailureNotification
 GO
+--exec dbo.BackupFailureNotification
+
 
 
 --create SQL Agent Job
