@@ -57,6 +57,8 @@ into #BackupFailureFULL
 						, BackupStartDate = backup_start_date
 						, physical_device_name 
 						, latest = Row_number() OVER (PARTITION BY database_name, type order by backup_finish_date desc)
+						, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (database_name)
+						
 						from msdb.dbo.backupset bs					
 						left outer join msdb.dbo.[backupmediafamily] bf
 						on bs.[media_set_id] = bf.[media_set_id]	
@@ -68,14 +70,16 @@ into #BackupFailureFULL
 					 select 
 						db_name(d.database_id)
 						, backuptype = 'Database'
-						, null, null, null, null
+						, null, null, null, null, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (db_name(d.database_id))
+						
 						FROM master.sys.databases d
 						group by db_name(d.database_id)
 					 UNION
 					 select 
 						db_name(d.database_id)
 						, backuptype = 'Transaction Log'
-						, null, null, null, null
+						, null, null, null, null, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (db_name(d.database_id))
+						
 					  FROM master.sys.databases d
 					  where d.recovery_model_desc in ('FULL', 'BULK_LOGGED')
 					  group by db_name(d.database_id)
@@ -86,87 +90,21 @@ into #BackupFailureFULL
  AND (		(backuptype <> 'Transaction Log' and d.recovery_model_desc = 'SIMPLE')
 		OR	(d.recovery_model_desc <> 'SIMPLE')
 	)
- and  d.replica_id IS Null
+ and  (d.replica_id IS Null --not in an Ag
+		or
+			--Select for AG databases that are prefered replicas that fit the criteria for a gap in backup history
+(d.replica_id IS Not Null  and  a.fn_hadr_backup_is_preferred_replica = 1) 
+			)
 group by 
 	  a.database_name
 	, a.backuptype 
 	, d.recovery_model_desc
 	, d.state_desc
 HAVING (MAX(a.BackupFinishDate) < DATEADD(DAY, -7, @TimeStampFULL) and backuptype = 'Database')
-
 		OR ((MAX(a.BackupFinishDate) IS NULL and backuptype = 'Database') OR (MAX(a.BackupFinishDate) < DATEADD(HOUR, -2, @TimeStampFULL) and backuptype = 'Transaction Log'))
-
 		OR (MAX(a.BackupFinishDate) IS NULL and backuptype = 'Transaction Log')
-	
 order by a.backuptype, d.recovery_model_desc, a.database_name asc;
 
---Select for AG databases that are prefered replicas that fit the criteria for a gap in backup history
-INSERT into #BackupFailureFULL
-SELECT  
-	  a.database_name
-	, a.backuptype
-	, d.recovery_model_desc
-	, LatestBackupDate = max(a.BackupFinishDate)
-	, LatestBackupLocation = max(a.physical_device_name)
-	, d.state_desc
- from sys.databases d
- inner join (	select * from (
-						select  
-						  database_name
-						, backuptype = case type	WHEN 'D' then 'Database'
-												WHEN 'I' then 'Differential database'
-												WHEN 'L' then 'Transaction Log'
-												WHEN 'F' then 'File or filegroup'
-												WHEN 'G' then 'Differential file'
-												WHEN 'P' then 'Partial'
-												WHEN 'Q' then 'Differential partial' END
-						, BackupFinishDate	=	backup_finish_date
-						, BackupStartDate = backup_start_date
-						, physical_device_name 
-						, latest = Row_number() OVER (PARTITION BY database_name, type order by backup_finish_date desc)
-						from msdb.dbo.backupset bs					
-						left outer join msdb.dbo.[backupmediafamily] bf
-						on bs.[media_set_id] = bf.[media_set_id]	
-						WHERE backup_finish_date is not null 
-						group by  database_name, backup_finish_date, backup_start_date, physical_device_name, type
-						) x
-						where latest = 1
-					 UNION 
-					 select 
-						db_name(d.database_id)
-						, backuptype = 'Database'
-						, null, null, null, null
-						FROM master.sys.databases d
-						group by db_name(d.database_id)
-					 UNION
-					 select 
-						db_name(d.database_id)
-						, backuptype = 'Transaction Log'
-						, null, null, null, null
-					  FROM master.sys.databases d
-					  where d.recovery_model_desc in ('FULL', 'BULK_LOGGED')
-					  group by db_name(d.database_id)
- ) a
- on db_name(d.database_id) = a.database_name
- WHERE a.database_name not in ('tempdb', 'model') 
- and d.state_desc ='ONLINE' 
- and d.replica_id IS Not Null 
- AND (		(backuptype <> 'Transaction Log' and d.recovery_model_desc = 'SIMPLE')
-		OR	(d.recovery_model_desc <> 'SIMPLE')
- )
- and  (sys.fn_hadr_backup_is_preferred_replica (a.database_name) = 0) 
-group by 
-	  a.database_name
-	, a.backuptype 
-	, d.recovery_model_desc
-	, d.state_desc
-HAVING (MAX(a.BackupFinishDate) < DATEADD(DAY, -7, @TimeStampFULL) and backuptype = 'Database')
-
-		OR ((MAX(a.BackupFinishDate) IS NULL and backuptype = 'Database') OR (MAX(a.BackupFinishDate) < DATEADD(HOUR, -2, @TimeStampFULL) and backuptype = 'Transaction Log'))
-
-		OR (MAX(a.BackupFinishDate) IS NULL and backuptype = 'Transaction Log')
-	
-order by a.backuptype, d.recovery_model_desc, a.database_name asc;
 
 if (SELECT COUNT(*) FROM #BackupFailureFULL
 ) > 0
