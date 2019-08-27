@@ -24,7 +24,7 @@ SELECT @StartWindow	 =	1	-- 1AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 1
 SELECT @EndWindow	 =	5	-- 5AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 SELECT @CompressWhenPossible = 0 -- 0 = Don't introduce new compression on indexes. 1= Compress when possible, even currently uncompressed databases.
 
-IF @TestMode = 1 PRINT 'Test mode is ON'
+IF @TestMode = 1 print '--Test mode is ON'
 
 DECLARE @maxlogid int  --used later on to throw an error if the loop encountered errors at any point
 SELECT @maxlogid = ISNULL(MAX(id),0) From DBALogging.dbo.IndexMaintLog
@@ -34,14 +34,14 @@ SET XACT_ABORT ON;
 BEGIN TRY 
 
 		IF EXISTS (select state_desc from sys.databases d where database_id = db_id() and (state_desc <> 'online' or is_read_only = 1))
-		THROW 51000, 'This database is not online, skipping', 1;  --stop if this database isn't online or is read_only. It may have already failed before this point anyway.
+		THROW 51000, '--This database is not online, skipping', 1;  --stop if this database isn't online or is read_only. It may have already failed before this point anyway.
 
 		IF EXISTS (SELECT dc.database_name
 					   FROM sys.dm_hadr_availability_replica_states  rs
 					   inner join sys.availability_databases_cluster dc on rs.group_id = dc.group_id
 					   WHERE is_local = 1 and role_desc <> 'PRIMARY' and dc.database_name = db_name() 
 					)
-		THROW  51000, 'This database is a secondary replica currently, skipping', 1; --stop if this database is a secondary replica in an AG
+		THROW  51000, '--This database is a secondary replica currently, skipping', 1; --stop if this database is a secondary replica in an AG
 
 		--IF @TestMode = 0 
 		--ALTER DATABASE wideWorldImporters SET RECOVERY BULK_LOGGED; --#TODO Change database name
@@ -223,7 +223,7 @@ BEGIN TRY
 								IF @frag > 20.0 and @Can_Reorg = 1
 									BEGIN
 						
-										IF @TestMode = 1 print '30%+ reorg'
+										IF @TestMode = 1 print '--30%+ reorg'
 					
 							
 										SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
@@ -244,7 +244,7 @@ BEGIN TRY
 										--  Unlike REORGANIZE steps, a REBUILD also updates the STATISTICS of an index.
 										IF @Can_RebuildOnline = 1 and @type_desc not like '%columnstore%'
 										BEGIN
-											IF @TestMode = 1 print '60%+ rebuild online'
+											IF @TestMode = 1 print '--60%+ rebuild online'
 							
 											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REBUILD ';
 								
@@ -263,7 +263,7 @@ BEGIN TRY
 										ELSE IF @Can_Reorg = 1
 										BEGIN
 							
-											IF @TestMode = 1 print '60%+ reorg'
+											IF @TestMode = 1 print '--60%+ reorg'
 							
 											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
 								
@@ -279,7 +279,7 @@ BEGIN TRY
 										--ELSE IF datepart(hour, sysdatetimeoffset()) < 3 --inclusive both hours.
 										--ELSE 
 										--BEGIN	
-										--	IF @TestMode = 1 print '60%+ rebuild offline!'
+										--	IF @TestMode = 1 print '--60%+ rebuild offline!'
 										--	SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '.' + @ObjectName + '] REBUILD';
 										--	IF @partitioncount > 1
 										--		SELECT @Command = @Command + ' PARTITION = ' + CONVERT (CHAR, @partitionnum);
@@ -300,7 +300,8 @@ BEGIN TRY
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
-										IF @TestMode = 1 PRINT N'Executed:  ' + @Command + ' Frag level: ' + cast(@frag as varchar(10))
+										IF @TestMode = 1 print N'--Executed: 
+										' + @Command + ' Frag level: ' + cast(@frag as varchar(10))
 										UPDATE DBALogging.dbo.IndexMaintLog 
 										SET EndTimeStamp = sysdatetimeoffset()
 										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
@@ -308,7 +309,7 @@ BEGIN TRY
 
 									END TRY 
 									BEGIN CATCH
-										IF @TestMode = 1 Print N'Error: ' + ERROR_MESSAGE()
+										IF @TestMode = 1 print N'--Error: ' + ERROR_MESSAGE()
 										UPDATE DBALogging.dbo.IndexMaintLog 
 										SET ErrorMessage = cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE()
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -320,7 +321,7 @@ BEGIN TRY
 						
 				END TRY
 				BEGIN CATCH
-					IF @TestMode = 1 PRINT N'Failed to execute the command:  ' + @Command + N' Error Message: ' + ERROR_MESSAGE()
+					IF @TestMode = 1 print N'--Failed to execute the command:  ' + @Command + N' Error Message: ' + ERROR_MESSAGE()
 				END CATCH
 
 			FETCH NEXT FROM curIndexPartitions 
@@ -416,7 +417,7 @@ BEGIN TRY
 			declare @s int = 1, @scount int = null, @runtsql nvarchar(4000) = null
 			select @scount = max(id) from @tsqllist l
 			
-			IF @TestMode = 1 print 'beginning stats'
+			IF @TestMode = 1 print '--beginning stats'
 						
 			while (@s <= @scount)
 			BEGIN
@@ -449,7 +450,8 @@ BEGIN TRY
 						BEGIN TRY 
 							IF @TestMode = 0 EXEC (@runtsql);
 
-							IF @TestMode = 1 PRINT N'Executed:  ' + @runtsql 
+							IF @TestMode = 1 PRINT N'--Executed:  
+							' + @runtsql 
 							UPDATE DBALogging.dbo.IndexMaintLog 
 							SET EndTimeStamp = sysdatetimeoffset()
 							,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
@@ -457,7 +459,7 @@ BEGIN TRY
 
 						END TRY 
 						BEGIN CATCH
-							IF @TestMode = 1 Print N'Error: ' + ERROR_MESSAGE()
+							IF @TestMode = 1 print N'--Error: ' + ERROR_MESSAGE()
 							UPDATE DBALogging.dbo.IndexMaintLog 
 							SET ErrorMessage = cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE()
 							WHERE id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -468,7 +470,7 @@ BEGIN TRY
 					set @s = @s + 1
 			END
 		
-			IF @TestMode = 1 print 'end update stats'
+			IF @TestMode = 1 print '--end update stats'
 		END
 
 		--IF @TestMode = 0 
@@ -476,13 +478,13 @@ BEGIN TRY
 
 	END TRY
 	BEGIN CATCH
-		IF @TestMode = 1 PRINT N'Failed to execute. Error Message: ' + ERROR_MESSAGE()
+		IF @TestMode = 1 print N'--Failed to execute. Error Message: ' + ERROR_MESSAGE()
 
 		IF ERROR_NUMBER() <> 51000 --detect a user-defined short-circuit above, for an offline database or a secondary replica, for example. This should not cause the job to fail.
 		BEGIN
 			--Write a record to the logging table, while we'll use below to THROW an error and cause the job to fail if >=1 errors are found.
-			INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
-			SELECT DB_NAME(), cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode
+			INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode, ObjectName, Command)
+			SELECT DB_NAME(), cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE(),  sysdatetimeoffset(), @TestMode, '[' + DB_Name() + '].[' + @SchemaName + '].[' + @ObjectName + ']', coalesce(@Command, @runtsql)
 		END
 
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
@@ -496,7 +498,7 @@ BEGIN TRY
 
 	END CATCH
 
-	IF @TestMode = 1 PRINT 'Done'
+	IF @TestMode = 1 print '--Done'
 
 	IF @TestMode = 0 AND EXISTS (SELECT 1 from DBALogging.dbo.IndexMaintLog where id > @maxlogid and ErrorMessage is not null)
 		BEGIN
@@ -514,7 +516,7 @@ CREATE TABLE DBALogging.dbo.IndexMaintLog
 (	id int not null identity(1,1) PRIMARY KEY
 ,	CurrentDatabase sysname not null DEFAULT (DB_NAME())
 ,	Command nvarchar(1000) null
-,	ObjectName nvarchar(100) null 
+,	ObjectName nvarchar(255) null 
 ,	BeginTimeStamp	datetimeoffset(2)  null 
 ,	TestMode bit  null
 ,	StartWindow tinyint  null
