@@ -1,5 +1,7 @@
+--Check TODO's 
+
 -- Create Table
-USE DBALogging
+USE DBALogging --TODO
 GO
 
 CREATE TABLE [dbo].[Space_in_Files](
@@ -25,6 +27,7 @@ CREATE PROCEDURE [dbo].[Get_Space_in_Files]
 @Threshold decimal(9,2)
 AS
 BEGIN
+--Version# Q319 Rev01
 --Changed all floats and decimal(18,2) to decimal(19,2) - WDA 20170312
 
 DECLARE @TimeStamp datetimeoffset(2) = sysdatetimeoffset()
@@ -98,7 +101,8 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 	--if @percent < @Threshold -- removed WDA 20170418
 	--BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
-		   @recipients = 'managed.sql@sparkhound.com',  
+		   @profile_name = 'profile', --TODO change
+		   @recipients = 'sql.alerts@sparkhound.com',  
 		   @body = @tableHTML, 
 		   @importance = 'HIGH', 
 		   @body_format ='HTML',
@@ -139,7 +143,7 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Space in Files Insert', @step_name=N'Ex
 		@retry_interval=0, 
 		@os_run_priority=0, @subsystem=N'TSQL', 
 		@command=N'exec dbo.Get_Space_in_Files @Threshold = 5;', 
-		@database_name=N'DBALogging', --make sure db name matches
+		@database_name=N'DBALogging', --TODO: make sure db name matches
 		@flags=0
 GO
 USE [msdb]
@@ -155,14 +159,14 @@ EXEC msdb.dbo.sp_update_job @job_name=N'Space in Files Insert',
 		@description=N'', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'', --enter operator name
+		@notify_email_operator_name=N'', --TODO: enter operator name
 		@notify_netsend_operator_name=N'', 
 		@notify_page_operator_name=N''
 GO
 USE [msdb]
 GO
 DECLARE @schedule_id int
-EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Space in Files Insert', @name=N'Every 4 Hours', 
+EXEC msdb.dbo.sp_add_jobschedule @job_name=N'Space in Files Monitoring', @name=N'Every 4 Hours', 
 		@enabled=1, 
 		@freq_type=4, 
 		@freq_interval=1, 

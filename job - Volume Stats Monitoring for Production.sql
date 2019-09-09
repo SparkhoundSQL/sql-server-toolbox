@@ -1,3 +1,5 @@
+--CHECK TODO's
+
 -- Create Table
 USE [DBALogging]
 GO
@@ -20,23 +22,14 @@ CREATE TABLE [dbo].[VolumeStats](
 
 GO
 
-USE [DBALogging]
-GO
-
-/****** Object:  StoredProcedure [dbo].[Get_VolumeStats]    Script Date: 4/19/2019 9:26:41 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
 --Create Sproc
 
 CREATE PROCEDURE [dbo].[Get_VolumeStats]
 @Threshold decimal(19,2) --re-enabled by WFC 06212019
 AS
 BEGIN
+--Version# Q319 Rev01
+
 --Changed all floats and decimal(18,2) to decimal(19,2) - WDA 20170312
 DECLARE @VolumeStats TABLE
 (ID int not null identity(1,1),
@@ -129,6 +122,7 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 	 AND @percent < 14 -- removed WDA 20170418 --changed CLL 20190329
 	BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
+		   @profile_name = 'whatever', --TODO
 		   @recipients = 'sql.alerts@sparkhound.com',  
 		   @body = @tableHTML, 
 		   @importance = 'HIGH', 
@@ -140,6 +134,7 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 	if @percent < 2 -- removed WDA 20170418 --changed CLL 20190329
 	BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
+		   @profile_name = 'whatever', --TODO
 		   @recipients = 'sql.alerts@sparkhound.com',  
 		   @body = @tableHTML, 
 		   @importance = 'HIGH', 
