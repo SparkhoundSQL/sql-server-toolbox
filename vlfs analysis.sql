@@ -77,7 +77,6 @@ SELECT @Log_MB=sum(convert(bigint, mf.size))*8./1024. FROM sys.master_files mf w
 SELECT @Co=Count_big(StartOff),@Avg_MB=@Log_MB/Count_big(StartOff), @Max_MB=MAX(FileSize_b/1048576.) from #Log
 IF (@Avg_MB>1024 OR (@Avg_MB<64 AND @Log_MB > 1024)) AND (@Log_MB>8000) AND EXISTS (select 1 FROM sys.databases WHERE is_read_only=0 and state=0 and db_id()=database_id)
 BEGIN
-SELECT DBName=db_name(),Co=@Co,Size_MB=@Log_MB,Avg_MB=@Avg_MB
 SELECT @LCnt=1, @Ac=0
 SELECT top 1 @T=''USE [''+d.name+'']
 CHECKPOINT
