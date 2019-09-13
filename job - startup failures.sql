@@ -83,8 +83,10 @@ INSERT INTO @readerrorlog (LogDate, LogProcessInfo, LogMessageText)
 --select * from @readerrorlog order by LogDate asc
 
 INSERT INTO @readerrorlog_found  (LogDate, LogProcessInfo, LogMessageText)
-select * from @readerrorlog
-where  (LogMessageText like ''%Error%''
+select LogDate, LogProcessInfo, LogMessageText from @readerrorlog
+where 
+LogDate > dateadd(mi, -10, sysdatetime()) and
+(LogMessageText like ''%Error%''
 or LogMessageText like ''%corruption%''
 or LogMessageText like ''%prevent%''
 or LogMessageText like ''%could not register the Service Principal Name%''
