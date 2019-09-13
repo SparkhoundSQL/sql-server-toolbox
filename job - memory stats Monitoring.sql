@@ -61,6 +61,7 @@ GO
 */
 
 CREATE PROCEDURE [dbo].[usp_GetMemoryStats] AS
+-- Version# Q319 Rev01
 BEGIN
 SET NOCOUNT ON
 INSERT INTO dbo.MemoryStats(
