@@ -99,7 +99,7 @@ BEGIN TRY
 		, indexname			
 		, [type_desc]
 		)
-			SELECT  
+			SELECT  DISTINCT
 					objectid			=	s.object_id
 				,	indexid				=	s.index_id
 				,	partitionnum		=	s.partition_number
