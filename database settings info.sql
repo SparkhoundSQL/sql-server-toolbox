@@ -1,10 +1,8 @@
---Last Update: 12/11/2018
-
 IF OBJECT_ID('tempdb..#DBSettings') IS NOT NULL
     BEGIN
 	   DROP TABLE #DBSettings;
     END;
-
+GO
 select 
 	name
 ,	[compatibility_level]	
@@ -20,6 +18,7 @@ select
 ,	log_reuse_wait
 ,	log_reuse_wait_desc
 ,	target_recovery_time_in_seconds
+,	ProductMajorVersion				= SERVERPROPERTY('ProductMajorVersion')
 into #DBSettings
 from sys.databases;
 
@@ -30,7 +29,7 @@ SELECT
  	Database_Name			= name
 ,	[Compatibility Level]	= [compatibility_level] --should be latest (130 = SQL2016, 120 = SQL2014, 110 = SQL2012, 100 = SQL2008, 90 = SQL2005)
 ,	[State]					= dbstate		
-,	Up_To_Date				= CASE WHEN LEFT(convert(char(3), [compatibility_level]),2) <> LEFT(convert(varchar(15), SERVERPROPERTY('ProductVersion')),2) THEN 'Database is in old compatibility mode' ELSE null END
+,	Up_To_Date				= cast(ProductMajorVersion as char(2)) + '0'
 from #DBSettings
 )
 select
@@ -39,8 +38,10 @@ select
 ,	[Alter]					= CASE WHEN Up_To_Date is not null THEN 'ALTER DATABASE [' + Database_Name +'] SET COMPATIBILITY_LEVEL = ' + LEFT(convert(varchar(15), SERVERPROPERTY('ProductVersion')),2) + '0;' ELSE NULL END
 ,	[Revert]				= CASE WHEN Up_To_Date is not null THEN 'ALTER DATABASE [' + Database_Name +'] SET COMPATIBILITY_LEVEL = ' + convert(char(3), [compatibility_level]) + ';' ELSE NULL END
 from cteDB
-WHERE Up_To_Date is not null
+WHERE Up_To_Date <> [compatibility_level]
+and state <> 'OFFLINE'
 order by [Database_Name];
+
 
 --Databases where page verify option is not CHECKSUM
 --Changing this setting does not instantly put a checksum on every page. Need to do an index REBUILD of all objets to get CHECKSUMS in place, or, it'll happen slowly over time as data is written.
@@ -86,6 +87,7 @@ select
 ,	[Is Auto Create Stats On]		= is_auto_create_stats_on		--should be 1 except for some SharePoint db's
 ,	[Is Auto Update Stats On]		= is_auto_update_stats_on		--should be 1 except for some SharePoint db's
 ,	[Is Auto Update Stats Async On]	= is_auto_update_stats_async_on	--should be 1 except for some SharePoint db's
+,	ProductVersion = SERVERPROPERTY('ProductVersion')
 ,	[Alter]							= CASE
 											WHEN is_auto_create_stats_on = 0 THEN 'ALTER DATABASE [' + name + '] SET AUTO_CREATE_STATISTICS ON WITH NO_WAIT;'
 											WHEN is_auto_update_stats_on = 0 THEN 'ALTER DATABASE [' + name + '] SET AUTO_UPDATE_STATISTICS ON WITH NO_WAIT;'
@@ -110,7 +112,7 @@ select
 from #DBSettings
 where is_auto_create_stats_on = 0
    OR is_auto_update_stats_on = 0
-   OR is_auto_update_stats_async_on = 0
+   OR (is_auto_update_stats_async_on = 0 and ProductMajorVersion >= 12)
 ORDER BY name;
 
 --Databases log reuse wait and description
@@ -123,15 +125,20 @@ select
 ,	[State]				= dbstate		
 ,	[Recovery Model]	= recovery_model_desc
 from #DBSettings
+where log_reuse_wait_desc not in ('NOTHING', 'CHECKPOINT', 'LOG_BACKUP', 'ACTIVE_BACKUP_OR_RESTORE', 'DATABASE_SNAPSHOT_CREATION', 'AVAILABILITY_REPLICA', 'OLDEST_PAGE', 'XTP_CHECKPOINT')
 ORDER BY name;
 
---Databases where target recovery time in seconds is < 60 (only applies to 2014+), and recommended in 2014+
+--Databases where target recovery time in seconds is < 60 (only applies to 2012+), and recommended in 2016+
+--Make sure latest patches are applied first.
 select 
 	[Database Name]			= name
 ,	[Target Recovery Time]	= target_recovery_time_in_seconds
 ,	[Alter]					= 'ALTER DATABASE [' + name + '] SET TARGET_RECOVERY_TIME = 60 SECONDS WITH NO_WAIT'
 ,	[Revert]				= 'ALTER DATABASE [' + name + '] SET TARGET_RECOVERY_TIME = ' + CAST(target_recovery_time_in_seconds AS VARCHAR(3)) + ' SECONDS WITH NO_WAIT'
 ,	[State]					= dbstate		
-from #DBSettings
+,	ProductMajorVersion
+from #DBSettings 
 where target_recovery_time_in_seconds = 0
+and cast(ProductMajorVersion as int) >= 13
+and [name] <> 'master'
 ORDER BY name;
