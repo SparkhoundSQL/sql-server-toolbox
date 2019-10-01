@@ -119,7 +119,7 @@ GO
 USE [msdb]
 GO
 DECLARE @jobId BINARY(16)
-EXEC  msdb.dbo.sp_add_job @job_name=N'Space In Files Insert', 
+EXEC  msdb.dbo.sp_add_job @job_name=N'Space In Files Monitoring', 
 		@enabled=1, 
 		@notify_level_eventlog=0, 
 		@notify_level_email=2, 
@@ -130,11 +130,11 @@ EXEC  msdb.dbo.sp_add_job @job_name=N'Space In Files Insert',
 		@owner_login_name=N'sa', @job_id = @jobId OUTPUT
 select @jobId
 GO
-EXEC msdb.dbo.sp_add_jobserver @job_name=N'Space in Files Insert', @server_name = N'(LOCAL)'
+EXEC msdb.dbo.sp_add_jobserver @job_name=N'Space In Files Monitoring', @server_name = N'(LOCAL)'
 GO
 USE [msdb]
 GO
-EXEC msdb.dbo.sp_add_jobstep @job_name=N'Space in Files Insert', @step_name=N'Exec Get_Space_in_Files', 
+EXEC msdb.dbo.sp_add_jobstep @job_name=N'Space In Files Monitoring', @step_name=N'Exec Get_Space_in_Files', 
 		@step_id=1, 
 		@cmdexec_success_code=0, 
 		@on_success_action=1, 
@@ -148,7 +148,7 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Space in Files Insert', @step_name=N'Ex
 GO
 USE [msdb]
 GO
-EXEC msdb.dbo.sp_update_job @job_name=N'Space in Files Insert', 
+EXEC msdb.dbo.sp_update_job @job_name=N'Space In Files Monitoring', 
 		@enabled=1, 
 		@start_step_id=1, 
 		@notify_level_eventlog=0, 
