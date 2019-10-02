@@ -1,6 +1,6 @@
 use w
 go
-DROP TABLE dbo.DimDate 
+DROP TABLE IF EXISTS dbo.DimDate 
 GO
 CREATE TABLE dbo.DimDate  (
     [dimDateID]       INT          NOT NULL,
@@ -17,9 +17,8 @@ CREATE TABLE dbo.DimDate  (
     [ISOWeek_of_Year] TINYINT      NOT NULL,
     [IsWeekend]       CHAR (3)     NOT NULL,
     CONSTRAINT [PK_WH_DimDate] PRIMARY KEY NONCLUSTERED ([CalendarDate] ASC) WITH (DATA_COMPRESSION = PAGE),
-    CONSTRAINT [IDX_NC_DimDate_dimDateID] UNIQUE CLUSTERED ([dimDateID] ASC) WITH (DATA_COMPRESSION = PAGE)
-) 
-
+    CONSTRAINT [IDX_NC_DimDate_DimDateID] UNIQUE CLUSTERED ([dimDateID] ASC) WITH (DATA_COMPRESSION = PAGE)
+);
 go
 
 ;with cteDate (seeddate) as
@@ -46,11 +45,9 @@ go
 		,	DayofWeek_Name	=	DateName(dw, seeddate) 
 		,	ISOWeek_of_Year	=	DatePart(ISO_WEEK, seeddate) 
 		,	IsWeekend		=	CASE WHEN DatePart(dw, seeddate) in (1,7) THEN 'Yes' ELSE 'No' END
-		
 		from cteDate
 		where seeddate < '1/1/2050'
-OPTION (MAXRECURSION 0)
-go
+OPTION (MAXRECURSION 0);
+GO
 
-
-select * from dimdate
+SELECT * FROM dbo.DimDate;
