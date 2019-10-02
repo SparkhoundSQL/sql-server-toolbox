@@ -3,7 +3,7 @@ go
 DROP TABLE IF EXISTS #audit_created  
 go
 CREATE TABLE #audit_created  
-(audit_created datetime2(0) primary key)
+(audit_created datetime2(0) primary key) --with datetime and datetime2, we don't know what time zone the data is stored in. 
 
 --See DimDate.sql
 INSERT INTO #audit_created (audit_created) 
@@ -30,7 +30,7 @@ SELECT * FROM sys.time_zone_info WHERE name = @TimeZone
 SELECT 
 	UTCDate = audit_created	 
 ,	BadStrategy = DATEADD(second, DATEDIFF(second, GETUTCDATE(), GETDATE()), audit_created ) --Don't use!
-,	ConvertedDate = audit_created  AT TIME ZONE 'UTC' AT TIME ZONE @TimeZone --SQL 2016+ only
+,	CorrectStrategy = audit_created  AT TIME ZONE 'UTC' AT TIME ZONE @TimeZone --SQL 2016+ only
 ,	WRONG = CASE WHEN convert(varchar(19), DATEADD(second, DATEDIFF(second, GETUTCDATE(), GETDATE()), audit_created )) = convert(varchar(19), audit_created  AT TIME ZONE 'UTC' AT TIME ZONE @TimeZone) THEN 0 ELSE 1 END
 FROM #audit_created
 GO
