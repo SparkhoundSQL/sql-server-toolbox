@@ -1,3 +1,5 @@
+--Strategies for converting time zones on past/future datasets for SQL2016+
+--For <SQL2016, see toolbox\lab - pre2016 correct time zone conversion from UTC.sql
 use w
 go
 DROP TABLE IF EXISTS #audit_created  
