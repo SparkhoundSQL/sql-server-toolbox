@@ -1,4 +1,6 @@
 --This lab demonstrates a common antipattern for converting UTC to the local timezone.
+--Will work <SQL 2016. Optional code at end to uncomment if SQL 2016+
+--Create the DST population table in comment below at bottom. This could be useful for your apps pre-SQL2016.
 
 declare @audit_created table 
 (audit_created datetime2(0))
@@ -23,18 +25,24 @@ values
 ,('6/1/2017 05:00') --One of these two rows will be wrong for Central US Time in the Incorrect pre2016 method. It'll be the one that doesn't match our CURRENT DST setting.
 
 select			
-	audit_created
-,	audit_created_actually_at_UTC	= TODATETIMEOFFSET(audit_created, 0)
-,   Incorrect_pre2016_method		=	DATEADD(second, DATEDIFF(second, GETUTCDATE(), GETDATE()), audit_created )
-,   Incorrect_pre2016_method_date	=	CONVERT(date, DATEADD(second, DATEDIFF(second, GETUTCDATE(), GETDATE()), audit_created ))
-,	Correct_pre2016_method				=	
-	SWITCHOFFSET(TODATETIMEOFFSET(audit_created, 0), DATEPART(TZoffset, SYSDATETIMEOFFSET()) + CASE WHEN EXISTS (select * from dbo.DSTDates where BeginDate<=TODATETIMEOFFSET(audit_created, 0) and EndDate>TODATETIMEOFFSET(audit_created, 0)) THEN 60 ELSE 0 END) 
-,	Correct_pre2016_method_date		=	CONVERT(DATE, 
-	SWITCHOFFSET(TODATETIMEOFFSET(audit_created, 0), DATEPART(TZoffset, SYSDATETIMEOFFSET()) + CASE WHEN EXISTS (select * from dbo.DSTDates where BeginDate<=TODATETIMEOFFSET(audit_created, 0) and EndDate>TODATETIMEOFFSET(audit_created, 0)) THEN 60 ELSE 0 END) 
+	audit_created	
+,	audit_created_actually_at_UTC				=	TODATETIMEOFFSET(audit_created, 0)
+,   Incorrect_pre2016_method_Central_time		=	DATEADD(second, DATEDIFF(second, GETUTCDATE(), GETDATE()), audit_created )
+,   Incorrect_pre2016_method_Central_time_date	=	CONVERT(date, DATEADD(second, DATEDIFF(second, GETUTCDATE(), GETDATE()), audit_created ))
+,	Correct_pre2016_method_Central_time			=	
+	SWITCHOFFSET(TODATETIMEOFFSET(audit_created, 0),  CASE WHEN EXISTS (select * from dbo.DSTDates where BeginDate<=TODATETIMEOFFSET(audit_created, 0) and EndDate>TODATETIMEOFFSET(audit_created, 0)) 
+															THEN -300 -- -5:00, CDT
+															ELSE -360 -- -6:00, CST 
+															END) 
+,	Correct_pre2016_method_Central_time_date	=	CONVERT(DATE, 
+	SWITCHOFFSET(TODATETIMEOFFSET(audit_created, 0),  CASE WHEN EXISTS (select * from dbo.DSTDates where BeginDate<=TODATETIMEOFFSET(audit_created, 0) and EndDate>TODATETIMEOFFSET(audit_created, 0)) 
+															THEN -300 -- -5:00, CDT
+															ELSE -360 -- -6:00, CST 
+															END) 
 	)
 
 --Uncomment the following two rows for the right way to do this in SQL 2016+
---,    Correct_2016_method			=   audit_created  AT TIME ZONE 'UTC' AT TIME ZONE 'Central Standard Time'
+--,    Correct_2016_method				=   audit_created  AT TIME ZONE 'UTC' AT TIME ZONE 'Central Standard Time'
 --,    Correct_2016_method__date		=	convert(date,  (audit_created AT TIME ZONE 'UTC'  AT TIME ZONE 'Central Standard Time'))
 from @audit_created as A
 
@@ -43,13 +51,13 @@ from @audit_created as A
 
 
 DROP TABLE dbo.DSTDates 
+GO
  CREATE TABLE dbo.DSTDates
  (	BeginDate datetimeoffset(0)
  ,	EndDate datetimeoffset(0)
  )
  GO
  CREATE CLUSTERED INDEX IDX_CL_DSTDates on dbo.DSTDates (BeginDate, EndDate)
- CREATE NONCLUSTERED INDEX IDX_NC_DSTDates on dbo.DSTDates (BeginDate, EndDate) 
  GO
   INSERT INTO dbo.DSTDates (BeginDate, EndDate)
 VALUES 
