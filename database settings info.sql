@@ -19,6 +19,7 @@ select
 ,	log_reuse_wait_desc
 ,	target_recovery_time_in_seconds
 ,	ProductMajorVersion				= SERVERPROPERTY('ProductMajorVersion')
+,	is_trustworthy_on
 into #DBSettings
 from sys.databases;
 
@@ -141,4 +142,14 @@ from #DBSettings
 where target_recovery_time_in_seconds = 0
 and cast(ProductMajorVersion as int) >= 13
 and [name] <> 'master'
+ORDER BY name;
+
+
+--Databases should only have the Trustworthy setting enabled if necessary. The msdb system database is Trustworthy by default. 
+select 
+	[Database Name]			= name
+,	is_trustworthy_on
+from #DBSettings
+where is_trustworthy_on = 1
+and name <> 'msdb'
 ORDER BY name;
