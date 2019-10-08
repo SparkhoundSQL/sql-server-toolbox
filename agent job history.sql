@@ -4,6 +4,11 @@
 --By default, 1000 and 100.
 exec msdb.dbo.sp_get_sqlagent_properties 
 GO
+
+--If Autostart = 0, check if SQL Server Agent service is set to Automatic startup.
+select servicename, startup_type_desc from sys.dm_server_services
+
+
 /*
 --Sample script to increase job history retention by an order of magnitude each. 
 --For a job that executes every 15 minutes, how much history do you want for that job?
