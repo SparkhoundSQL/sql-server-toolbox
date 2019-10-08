@@ -1,5 +1,5 @@
 -- Easy passwords hash comparison
-
+-- SQL 2012+ only.
 -- WARNING this script may take ~1 hour to complete.
 
 -- Complete two TODO items below before executing
