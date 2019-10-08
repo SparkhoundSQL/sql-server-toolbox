@@ -15,17 +15,22 @@
 		  , Object_Type = ISNULL(i.type_desc + ' Index', 'Statistics Object')
           , Stats_Last_Updated = ISNULL(sp.last_updated, o.create_date)
 		  , Rows_Changed = ISNULL(sp.modification_counter,0) --Rows Changed since last update
+		  --Below block only works in SQL 2014+, comment out this line in prior versions.
+		  /*
 		  , PartitionNumber = CASE WHEN MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN p.partition_number ELSE null END
 		  , STA.is_incremental --Only works in SQL 2014+, comment out this line in prior versions.
+		  */
 		  , TSQL = CASE WHEN i.type_desc like '%columnstore%' THEN NULL ELSE
 		    N'UPDATE STATISTICS '
                + QUOTENAME(s.name) + N'.' + QUOTENAME(o.name) + N' '
                + QUOTENAME(STA.name) + N' '
 			   + 'WITH RESAMPLE'
+			   --Below block only works in SQL 2014+, comment out this line in prior versions.
+			   /*
 			   + CASE WHEN 
---						STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
+						STA.Is_Incremental = 1 and  
 						MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN ' ON PARTITIONS (' + cast(p.partition_number as varchar(5)) + ') ' ELSE '' END
-               
+				*/               
 			END
    FROM sys.objects  o   
 		 INNER JOIN sys.stats STA ON STA.object_id = o.object_id  
@@ -35,12 +40,15 @@
 		 LEFT OUTER JOIN sys.indexes as i
 			on i.index_id = STA.stats_id
 			and (i.type_desc not like '%columnstore%')
-	     LEFT OUTER join sys.dm_db_partition_stats p 
+	     --Below block only works in SQL 2014+, comment out this line in prior versions.
+			   /*
+			   LEFT OUTER join sys.dm_db_partition_stats p 
 			on (
 			STA.Is_Incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions. 
 			p.object_id = o.object_id  and 
 			i.index_id = p.index_id
 			)
+			*/
          LEFT JOIN 
          (SELECT IUS.object_id 
                 ,MIN(ISNULL(IUS.last_user_update, IUS.last_system_update)) AS LastUpdate 
