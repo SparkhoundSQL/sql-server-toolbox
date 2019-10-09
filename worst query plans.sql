@@ -72,8 +72,7 @@ ORDER BY CpuRank + PhysicalReadsRank + DurationRank asc;
 --For SQL 2000 only
 SELECT 
 UseCounts, RefCounts,CacheObjtype, ObjType, DB_NAME(dbid) as DatabaseName, SQL
-FROM sys.syscacheobjects
-where sql like '%mtblFeeEndorsement%'
+FROM syscacheobjects
 ORDER BY dbid,usecounts DESC,objtype
 GO
 -----------------*/
