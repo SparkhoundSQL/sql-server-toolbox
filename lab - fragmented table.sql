@@ -14,7 +14,7 @@ ALTER TABLE dbo.fragmented_table ADD CONSTRAINT
 	PK_fragmented_table PRIMARY KEY CLUSTERED 
 	(
 	fragid
-	) WITH (SORT_IN_TEMPDB = ON)
+	) 
 go
 CREATE NONCLUSTERED INDEX IDX_NC_fragmented_table
 ON dbo.fragmented_table (fragtext) 
