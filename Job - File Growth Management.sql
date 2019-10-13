@@ -1,14 +1,8 @@
---Replaces our monthly findings to prevent autogrowths
+--Replaces our monthly findings to prevent autogrowths by proactively growing files.
+--Replaces our Space In Files Monitoring job which only notified. 
 --TODO: Update the @Threshold variable if using  value other than 10%, Update the email operator for the job notification
 
 USE DBALogging --TODO
-GO
-
-IF NOT EXISTS (select * from sys.objects o inner join sys.columns c on o.object_id = c.object_id 
-			where o.name = 'Space_in_Files' and c.name = 'JobFileGrowth')
-ALTER TABLE dbo.[Space_in_Files]
-ADD JobFileGrowth varchar(2000)
-,FileGrowthDuration_s int
 GO
 --If not exists, create the table anew
 -- Create Table
@@ -31,7 +25,13 @@ CREATE TABLE [dbo].[Space_in_Files](
 (	[ID] ASC)
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
-
+GO
+--If it already exists, add these columns if they don't exist.
+IF NOT EXISTS (select * from sys.objects o inner join sys.columns c on o.object_id = c.object_id 
+			where o.name = 'Space_in_Files' and c.name = 'JobFileGrowth')
+ALTER TABLE dbo.[Space_in_Files]
+ADD JobFileGrowth varchar(2000)
+,FileGrowthDuration_s int
 GO
 
 --Create Job
@@ -43,6 +43,7 @@ select @startup_job_id = job_id from  msdb.dbo.sysjobs where name = 'File Growth
 IF @startup_job_id is not null
 EXEC msdb.dbo.sp_delete_job @job_id=@startup_job_id, @delete_unused_schedule=1
 GO
+
 
 
 BEGIN TRANSACTION
@@ -100,7 +101,7 @@ DECLARE @GrowFileTxt nvarchar(4000)
 
 INSERT INTO @TempTable
 exec sp_MSforeachdb  ''use [?]; 
-DECLARE @Threshold decimal(9,2) = 10.0 
+DECLARE @Threshold decimal(9,2) = 10.0 -- TODO Modify if desired.
 select *,
 growTSQL = ''''ALTER DATABASE [''''+DatabaseName_____________ COLLATE SQL_Latin1_General_CP1_CI_AS+''''] 
 MODIFY FILE ( NAME = N''''''''''''+DatabaseFileName_______ COLLATE SQL_Latin1_General_CP1_CI_AS +''''''''''''
@@ -203,3 +204,10 @@ QuitWithRollback:
 EndSave:
 GO
 
+--Can get rid of old Space In Files Monitoring if it exists
+declare @startup_job_id uniqueidentifier
+select @startup_job_id = job_id from  msdb.dbo.sysjobs where name = 'Space In Files Monitoring'
+
+IF @startup_job_id is not null
+EXEC msdb.dbo.sp_delete_job @job_id=@startup_job_id, @delete_unused_schedule=1
+GO
