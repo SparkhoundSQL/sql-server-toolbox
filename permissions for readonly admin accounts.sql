@@ -29,3 +29,4 @@ CREATE USER [Sparkhound\DB Administrators-Readonly] FOR LOGIN [Sparkhound\DB Adm
 ALTER ROLE [SQLAgentReaderRole] ADD MEMBER [Sparkhound\DB Administrators-Readonly]
 ALTER ROLE [SQLAgentOperatorRole] ADD MEMBER [Sparkhound\DB Administrators-Readonly]
 GRANT SELECT TO [Sparkhound\DB Administrators-Readonly]
+GRANT EXECUTE ON sysmail_help_profile_sp TO [Sparkhound\DB Administrators-Readonly]
