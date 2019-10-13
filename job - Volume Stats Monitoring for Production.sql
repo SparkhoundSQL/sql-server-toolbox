@@ -1,10 +1,10 @@
 --CHECK TODO's
 
 -- Create Table
-USE [DBALogging]
+USE [DBALogging] --TODO
 GO
 
-
+IF NOT EXISTS (SELECT * FROM sys.objects where name = 'VolumeStats' and type_desc = 'USER_TABLE')
 CREATE TABLE [dbo].[VolumeStats](
 	[ID] int IDENTITY(1,1) NOT NULL,
 	[DiskDrive] nvarchar (512) NULL,
@@ -147,6 +147,13 @@ END;
 
 GO
 
+
+declare @startup_job_id uniqueidentifier
+select @startup_job_id = job_id from  msdb.dbo.sysjobs where name = 'Volume Stats Monitoring'
+
+IF @startup_job_id is not null
+EXEC msdb.dbo.sp_delete_job @job_id=@startup_job_id, @delete_unused_schedule=1
+GO
 
 
 
