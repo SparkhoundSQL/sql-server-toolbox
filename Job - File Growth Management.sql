@@ -68,7 +68,7 @@ EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'File Growth Management Job',
 		@description=N'No description available.', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'Managed.SQL@sparkhound.com', --TODO: Update with a valid operator
+		@notify_email_operator_name=N'sql.alerts@sparkhound.com', --TODO: Update with a valid operator
 		@job_id = @jobId OUTPUT
 IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
 
@@ -166,8 +166,8 @@ begin
 								Set @ERR_TEXT = CONCAT(''While executeing the File growth command: '', @GrowFileTxt, '', the following error was encountered. '', ERROR_MESSAGE())
                                 --THROW --don''t do this, it would stop the loop
 										EXEC msdb.dbo.sp_send_dbmail  
-										@profile_name  = ''sh-sp2013-sql'', --TODO change dbmail profile 
-										@recipients = ''managed.sql@sparkhound.com'',  
+										@profile_name  = ''sh-tenroxsql'', --TODO change dbmail profile 
+										@recipients = ''sql.alerts@sparkhound.com'',  
 										@body = @ERR_TEXT,
 										@importance = ''HIGH'',
 										@body_format =''TEXT'',
