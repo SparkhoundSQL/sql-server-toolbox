@@ -1,17 +1,18 @@
 --Replaces our monthly findings to prevent autogrowths
 --TODO: Update the @Threshold variable if using  value other than 10%, Update the email operator for the job notification
 
-IF EXISTS (select * from sys.objects where name = 'Space_in_Files')
+USE DBALogging --TODO
+GO
+
+IF NOT EXISTS (select * from sys.objects o inner join sys.columns c on o.object_id = c.object_id 
+			where o.name = 'Space_in_Files' and c.name = 'JobFileGrowth')
 ALTER TABLE dbo.[Space_in_Files]
 ADD JobFileGrowth varchar(2000)
 ,FileGrowthDuration_s int
 GO
 --If not exists, create the table anew
-
 -- Create Table
-USE DBALogging
-GO
-
+IF NOT EXISTS (select * from sys.objects where name = 'Space_in_Files')
 CREATE TABLE [dbo].[Space_in_Files](
 	[ID] [int] IDENTITY(1,1) NOT NULL
 ,DatabaseName varchar(128)
@@ -35,6 +36,12 @@ GO
 
 --Create Job
 USE [msdb]
+GO
+declare @startup_job_id uniqueidentifier
+select @startup_job_id = job_id from  msdb.dbo.sysjobs where name = 'File Growth Management Job'
+
+IF @startup_job_id is not null
+EXEC msdb.dbo.sp_delete_job @job_id=@startup_job_id, @delete_unused_schedule=1
 GO
 
 
@@ -60,7 +67,7 @@ EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'File Growth Management Job',
 		@description=N'No description available.', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'DBA Alert', --Update with a valid operator
+		@notify_email_operator_name=N'Managed.SQL@sparkhound.com', --TODO: Update with a valid operator
 		@job_id = @jobId OUTPUT
 IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
 
@@ -121,8 +128,6 @@ AND df.Type_desc <> ''''FILESTREAM''''
 AND df.size > 0) AS x
 WHERE FreePercent < @Threshold Or FreePercent is NULL;''
 
---Delete from @TempTable where FreePercent > @Threshold Or FreePercent is NULL
-
 DECLARE @FileCounter INT = 1
 DECLARE @FileMax INT
 Set @FileMax = (Select Max(ID) from @TempTable)
@@ -138,12 +143,13 @@ begin
                 Exec (@GrowFileTxt)
                 set @endtime = SYSDATETIMEOFFSET()
 
-                
+ 
                                 --Log the activity
                                 INSERT INTO [DBALogging].dbo.[Space_in_Files] (DatabaseName,recovery_model_desc  ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent,
                                 JobFileGrowth, FileGrowthDuration_s)
                                 SELECT DatabaseName,recovery_model_desc ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent,  
-                                ERROR_MESSAGE(), datediff(s,@starttime, @endtime)FROM @TempTable
+                                @GrowFileTxt, datediff(s,@starttime, @endtime) FROM @TempTable
+								WHERE ID = @FileCounter 
                 END TRY
                 BEGIN CATCH
                 
@@ -151,20 +157,23 @@ begin
                                 INSERT INTO [DBALogging].dbo.[Space_in_Files] (DatabaseName,recovery_model_desc  ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent,
                                 JobFileGrowth, FileGrowthDuration_s)
                                 SELECT DatabaseName,recovery_model_desc ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent,  
-                                ERROR_MESSAGE(), datediff(s,@starttime, @endtime)FROM @TempTable
+                                ERROR_MESSAGE(), datediff(s,@starttime, @endtime)FROM @TempTable 
+								WHERE ID = @FileCounter
 
                                 --SEND EMAIL
 								DECLARE @ERR_TEXT nvarchar(MAX)
 								Set @ERR_TEXT = CONCAT(''While executeing the File growth command: '', @GrowFileTxt, '', the following error was encountered. '', ERROR_MESSAGE())
                                 --THROW --don''t do this, it would stop the loop
 										EXEC msdb.dbo.sp_send_dbmail  
+										@profile_name  = ''sh-sp2013-sql'', --TODO change dbmail profile 
 										@recipients = ''managed.sql@sparkhound.com'',  
 										@body = @ERR_TEXT,
 										@importance = ''HIGH'',
 										@body_format =''TEXT'',
 										@subject = ''File Growth Management Job Alert'' ; 
                 END CATCH
-    set @FileCounter = @FileCounter +1
+    set @FileCounter = @FileCounter +1;
+	set @GrowFileTxt = null;
 end', 
 		@database_name=N'master', 
 		@flags=0
