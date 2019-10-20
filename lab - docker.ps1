@@ -29,10 +29,14 @@ docker pull microsoft/mssql-server-windows-developer:latest #Latest Windows. Mak
 #Show the images currently present
 docker images
 
+#Create one or more containers running SQL server instances
 #sa password must be strong or it won't work!
-docker run -d -p 1433:1433 --name w20190515 -e sa_password=abc123@ABC -e ACCEPT_EULA=Y microsoft/mssql-server-windows-developer:latest
+docker run -d -p 1433:1433 --name w1 -e sa_password=abc123@ABC -e ACCEPT_EULA=Y microsoft/mssql-server-windows-developer:latest
+docker run -d -p 1437:1437 --name w2 -e sa_password=abc123@ABC -e ACCEPT_EULA=Y microsoft/mssql-server-windows-developer:latest
+
 #Linux docker run -d -p 1433:1433 --name w20190515 -e sa_password=abc123@ABC -e MSSQL_PID=Developer -e ACCEPT_EULA=Y mcr.microsoft.com/mssql/server:2019-CTP2.5-ubuntu
 #Returns a containerid, use the first 12 characters for container id's here on out.
+docker inspect 0d17d7d4f704
 
 #containers
 docker ps -a
@@ -40,19 +44,19 @@ docker ps -a
 ##connect to SQL Server in Docker: https://cloudblogs.microsoft.com/sqlserver/2016/10/13/sql-server-2016-express-edition-in-windows-containers/
 
 #To connect with SQLCMD inside the docker container in a Docker Powershell session:
-docker exec -it 7abc87e6f900 sqlcmd -S. -Usa
+docker exec -it 0d17d7d4f704 sqlcmd -S. -Usa
 
 #To connect with SSMS or from outside the container, inspect the container and get the IP address so that you can reach it. https://docs.docker.com/engine/reference/commandline/inspect/
-docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' df32fed650f1
+docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 0d17d7d4f704
 
 #To connect with SSMS, use the IP. We installed using 1433, so no port needed. You must check "trust server certificate".
 #To connect with PowerShell
-Invoke-Sqlcmd -Query 'select * from sys.dm_os_sys_info' -ServerInstance 172.17.0.2 -Username sa -Password abc123@ABC 
+Invoke-Sqlcmd -Query 'select * from sys.dm_os_sys_info' -ServerInstance 172.22.73.48 -Username sa -Password myP@$$w0rd 
 #Linux docker exec -it f1bb1d621033 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P abc123@ABC
 
 #remove container
-docker stop f1bb1d621033
-docker rm f1bb1d621033
+docker stop 0d17d7d4f704 6071cb88ef16
+docker rm 0d17d7d4f704 6071cb88ef16
 
 #cleanup of all stopped containers 
 docker container prune
