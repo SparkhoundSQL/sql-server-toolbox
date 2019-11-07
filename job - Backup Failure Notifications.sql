@@ -2,7 +2,7 @@
 --      Update Stored procedure verion after modification
 
 --create proc
-USE [DBAHound]
+USE [DBAHound] --TODO
 GO
 
 CREATE PROCEDURE [dbo].[BackupFailureNotification] 
@@ -162,9 +162,8 @@ BEGIN
 						WHEN (SELECT COUNT(*) FROM #BackupFailureFULL WHERE backuptype = 'Transaction Log') = 0 THEN 'The following databases have recently missed backups and should be investigated:' + @tableData
 				 ELSE 'The following databases have recently missed backups and should be investigated:' + @tableData + @tableLog END
 	SET @nServer = 'Backup Failure on ' + @@SERVERNAME
-		--TODO: change profile_name and recipinets below, per server
 		EXEC msdb.dbo.sp_send_dbmail 
-			@profile_name  = 'sh-tfssql' ,
+		   @profile_name  = 'whatever' , --TODO: change profile_name and recipinets below, per server
 		   @recipients = 'sql.alerts@sparkhound.com', 
 		   @body =  @nBody,
 		   @body_format ='HTML',
@@ -197,7 +196,7 @@ END
 
 DECLARE @jobId BINARY(16)
 EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Backup Failure Notification', 
-		@enabled=0, 
+		@enabled=1, 
 		@notify_level_eventlog=0, 
 		@notify_level_email=2, 
 		@notify_level_netsend=0, 
@@ -206,7 +205,7 @@ EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Backup Failure Notification'
 		@description=N'Notifies managed.sql of any missed backups within a specified time period', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'DBAdministrators@sparkhound.com', @job_id = @jobId OUTPUT --TODO: change this line per server
+		@notify_email_operator_name=N'sql.alerts@sparkhound.com', @job_id = @jobId OUTPUT --TODO: change this line per server
 IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
 /****** Object:  Step [Run Hourly Backup Checks]    Script Date: 4/19/2019 9:50:12 AM ******/
 EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'Run Hourly Backup Checks', 

@@ -10,7 +10,7 @@ dm_exec_session_wait_stats.sql � Aggregate Session-level Wait Data
 SELECT 
 	wait_type
 ,	wait_time_s				=	wait_time_ms / 1000 
-,	Pct						=	100 * wait_time_ms/sum(wait_time_ms) OVER()
+,	Pct						=	100 * wait_time_ms/sum(nullif(wait_time_ms,0)) OVER()
 ,	avg_ms_per_wait			=	wait_time_ms / nullif(waiting_tasks_count,0)
 ,	waiting_tasks_count
 FROM 

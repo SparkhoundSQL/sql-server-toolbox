@@ -408,8 +408,12 @@ BEGIN TRY
 							(sp.last_updated is null and sp.[rows] > 10000) --big enough tables should have stats updated, 10000 is arbitrary
 							OR
 							(DATEDIFF(d, ISNULL(sp.last_updated, N'1900-01-01')  , IUS.LastUpdate) > 30 --indexes that haven''t been updated in the last month
-								AND (sp.modification_counter*1./sp.[rows]) > .3 --changes equal 30% of rows, an arbitrary line to cross
 								and sp.[rows] > 10000
+								AND 
+									((sp.modification_counter*1./sp.[rows]) > .3 --changes equal 30% of rows, an arbitrary line to cross
+									or modification_counter > 50000
+									)
+								
 							)	
 						)
 				OPTION (MAXDOP 1);

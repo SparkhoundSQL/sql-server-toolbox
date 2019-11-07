@@ -1,14 +1,7 @@
-CREATE TABLE #DBInfo (ParentObject VARCHAR(255), [Object] VARCHAR(255), Field VARCHAR(255), [Value] VARCHAR(255))
-CREATE TABLE #Value (DatabaseName VARCHAR(255), LastDBCCCheckDB DATETIME)
-EXECUTE sp_MSforeachdb '
---Insert results of DBCC DBINFO into temp table, transform into simpler table with database name and datetime of last known good DBCC CheckDB
-INSERT INTO #DBInfo EXECUTE ("DBCC DBINFO ( ""?"" ) WITH TABLERESULTS");
-INSERT INTO #Value (DatabaseName, LastDBCCCheckDB) (SELECT "?", [Value] FROM #DBInfo WHERE Field = "dbi_dbccLastKnownGood");
-TRUNCATE TABLE #DBInfo;
-'
-SELECT v.*, d.state_desc FROM #Value v inner join sys.databases d on v.DatabaseName = d.name 
-GO
-DROP TABLE #DBInfo
-DROP TABLE #Value 
-
---credit Ryan DeVries: https://www.brentozar.com/archive/2015/08/getting-the-last-good-dbcc-checkdb-date/#comment-2211907
+EXEC sp_MSforeachdb '
+--Table variable to capture the DBCC DBINFO output, look for the field we want in each database output
+DECLARE @DBCC_DBINFO TABLE (ParentObject VARCHAR(255) NOT NULL, [Object] VARCHAR(255)  NOT NULL, [Field] VARCHAR(255) NOT NULL 
+INDEX idx_dbinfo_field CLUSTERED --just this line is SQL 2014+ only
+, [Value] VARCHAR(255));
+INSERT INTO @DBCC_DBINFO EXECUTE ("DBCC DBINFO ([?]) WITH TABLERESULTS");
+SELECT DISTINCT ''?'', [Value] FROM @DBCC_DBINFO WHERE Field = ''dbi_dbccLastKnownGood'';';

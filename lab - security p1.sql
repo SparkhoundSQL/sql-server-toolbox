@@ -2,12 +2,12 @@ USE [master]
 GO
 /*
 
-if (select LOGINPROPERTY('DenyPrincipal',null)) is not null
+if exists (select * from sys.server_principals where name = 'DenyPrincipal') 
 DROP LOGIN [DenyPrincipal] 
 go
 use securitydemo
 go
-if (select USER_ID('DenyPrincipal')) is not null
+if exists (select * from sys.database_principals where name = 'DenyPrincipal') 
 DROP USER [DenyPrincipal]
 drop view if exists dbo.DenyTableview 
 drop table if exists  dbo.DenyTable 

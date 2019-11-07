@@ -4,7 +4,9 @@ dm_os_waiting_tasks.sql – Live Session-level Wait Data
 dm_exec_session_wait_stats.sql – Aggregate Session-level Wait Data
 */
 
-select * from sys.dm_exec_session_wait_stats wt
+select *
+,	avg_ms_per_wait			=	wait_time_ms / nullif(waiting_tasks_count,0)
+from sys.dm_exec_session_wait_stats wt
 where 1=1 
 --and session_id = 69
 --and wt.session_id >= 50

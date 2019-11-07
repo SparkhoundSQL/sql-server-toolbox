@@ -12,14 +12,11 @@ exec sp_msforeachdb 'use [?]; GRANT VIEW DATABASE STATE TO [Sparkhound\DB Admini
 
 
 --For the Error Log
---One of the next two scripts will work, but only the first allows SQL Error Log access via the UI.
 --However, securityadmin is virtually the same as sysadmin, since you can make yourself a sysadmin.
 --https://social.msdn.microsoft.com/Forums/en-US/11efe32b-1af5-44da-bbf7-e183e5341f2c/grant-access-to-view-sql-server-logs-from-sql-server-management-studio?forum=sqlsecurity'
---There is no permission short of securityadmin/sysadmin that allows SSMS to view logs. 
+--There is no permission short of securityadmin/sysadmin and xp_readerrorlog that allows SSMS to view logs. 
 ALTER SERVER ROLE [securityadmin] ADD MEMBER [Sparkhound\DB Administrators-Readonly]
---or--
-GRANT  EXECUTE ON xp_readerrorlog TO [Sparkhound\DB Administrators-Readonly]; 
---With the above permission and no membership to sysadmin or securityadmin, must use toolbox/error log.sql instead of the SSMS UI to view logs.
+GRANT EXECUTE ON xp_readerrorlog TO [Sparkhound\DB Administrators-Readonly]; 
 GO
 
 --For SQL Agent jobs 
@@ -29,3 +26,4 @@ CREATE USER [Sparkhound\DB Administrators-Readonly] FOR LOGIN [Sparkhound\DB Adm
 ALTER ROLE [SQLAgentReaderRole] ADD MEMBER [Sparkhound\DB Administrators-Readonly]
 ALTER ROLE [SQLAgentOperatorRole] ADD MEMBER [Sparkhound\DB Administrators-Readonly]
 GRANT SELECT TO [Sparkhound\DB Administrators-Readonly]
+GRANT EXECUTE ON sysmail_help_profile_sp TO [Sparkhound\DB Administrators-Readonly]

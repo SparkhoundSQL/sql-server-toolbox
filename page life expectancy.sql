@@ -3,12 +3,12 @@ select
 	p.InstanceName
 ,	c.Version 
 ,	'LogicalCPUCount'		= os.cpu_count
-,	Server_Physical_Mem_MB = os.[Server Physical Mem (MB)] -- SQL2012+ only
+,	OS_Physical_Mem_MB = os.[Server Physical Mem (MB)] -- SQL2012+ only
 ,	Min_Server_Mem_MB = c.[Min_Server_Mem_MB]
 ,	Max_Server_Mem_MB = c.[Max_Server_Mem_MB] --2147483647 means unlimited, just like it shows in SSMS
 ,	p.PLE_s --300s is only an arbitrary rule for smaller memory servers (<16gb), for larger, it should be baselined and measured.
 ,	'Churn (MB/s)'			=	cast((p.Total_Server_Mem_GB)/1024./NULLIF(p.PLE_s,0) as decimal(19,2))
-,	Server_Available_physical_mem_GB = (SELECT cast(available_physical_memory_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_sys_memory) 
+,	OS_Available_physical_mem_GB = (SELECT cast(available_physical_memory_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_sys_memory) 
 ,	SQL_Physical_memory_in_use_GB = (SELECT cast(physical_memory_in_use_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_process_memory)
 ,	p.Total_Server_Mem_GB --May be more or less than memory_in_use 
 ,	p.Target_Server_Mem_GB	

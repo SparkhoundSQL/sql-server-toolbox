@@ -7,14 +7,13 @@ create table dbo.floatinghorror
 go
 --1 thru 8
 insert into dbo.floatinghorror (invoiceid, whatever)
-values (2019000000000.001, char(79));
+values (2019000000100.001, char(79));
 insert into dbo.floatinghorror (invoiceid, whatever)
-values (2019000000000.002, char(77));
+values (2019000000100.002, char(77));
 insert into dbo.floatinghorror (invoiceid, whatever)
-values (2019000000000.003, char(71));
+values (2019000000100.003, char(71));
 insert into dbo.floatinghorror (invoiceid, whatever)
-values (2019000000000.004, char(33));
-GO
+values (2019000000100.004, char(33));
 insert into dbo.floatinghorror (invoiceid, whatever)
 values (2019000000100.005, char(87));
 insert into dbo.floatinghorror (invoiceid, whatever)
@@ -27,9 +26,9 @@ values (2019000000100.008, char(33));
 GO
 
 select invoiceid from dbo.floatinghorror --weird
-select distinct invoiceid from dbo.floatinghorror --more weird, aggregates correctly?!
+select invoiceid from dbo.floatinghorror group by invoiceid --more weird, aggregates correctly?!
 select invoiceid, count(1) from dbo.floatinghorror group by invoiceid --still weird, aggregates correctly?!
-select cast(invoiceid as decimal(19,3)), count(1) from dbo.floatinghorror group by invoiceid --to display the right data, gotta convert
+select cast(invoiceid as decimal(19,3)), count(1) from dbo.floatinghorror group by invoiceid --to actually display the data, gotta convert
 GO
 
 --Say we have to migrate the data to another system, like a data warehouse or a competitor's software, 
@@ -43,8 +42,9 @@ create table dbo.migrated_table
 insert into dbo.migrated_table (invoiceid, whatever)
 select invoiceid, whatever from dbo.floatinghorror 
 GO
-select * from dbo.migrated_table
 --but oh no!
+select * from dbo.migrated_table
+
 
 
 
