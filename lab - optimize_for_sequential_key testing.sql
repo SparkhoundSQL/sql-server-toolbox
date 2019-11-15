@@ -1,3 +1,6 @@
+--Demonstrate wait type reduction with new OPTIMIZE_FOR_SEQUENTIAL_KEY in SQL 2019
+-- First run without OPTIMIZE_FOR_SEQUENTIAL_KEY, then run with OPTIMIZE_FOR_SEQUENTIAL_KEY
+
 use w
 go
 dbcc freeproccache
@@ -23,8 +26,8 @@ ALTER TABLE dbo.fragmented_table_int ADD CONSTRAINT
 go
 CREATE NONCLUSTERED INDEX IDX_NC_fragmented_table_int
 ON dbo.fragmented_table_int (FRAGTEXT) 
- WITH (OPTIMIZE_FOR_SEQUENTIAL_KEY = ON --SQL 2019 only!
-	)
+--  WITH (OPTIMIZE_FOR_SEQUENTIAL_KEY = ON --SQL 2019 only!
+-- 	)
 
 GO
 
