@@ -119,7 +119,7 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
   
 	BEGIN
 	if @percent > 2
-	 AND @percent < 14 -- removed WDA 20170418 --changed CLL 20190329
+	 AND @percent < @Threshold -- removed WDA 20170418 --changed CLL 20190329
 	BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
 		   @profile_name = 'whatever', --TODO
