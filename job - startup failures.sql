@@ -53,6 +53,7 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Startup error check', @step_name=N'chec
 		@os_run_priority=0, @subsystem=N'TSQL', 
 		@command=N'--Intention is to catch only severe errors and startup failures
 --Specifically because before Service Broker starts, some error Alerts may not send emails.
+--Version# Q419 Rev01
 
 declare @When_Startup_Detected datetime2(2)
 select @When_Startup_Detected = sysdatetime()

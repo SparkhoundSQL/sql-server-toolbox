@@ -3,15 +3,10 @@
 --select * from [DBALogging].dbo.MemoryStats
 
 -- Create Table
+--TODO Change database name
 USE [DBALogging]
 GO
 
-/****** Object:  Table [dbo].[MemoryStats]    Script Date: 11/20/2017 10:01:45 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
 DROP TABLE IF EXISTS [dbo].[MemoryStats]
 
 CREATE TABLE [dbo].[MemoryStats](
@@ -35,30 +30,9 @@ CREATE TABLE [dbo].[MemoryStats](
 GO
 
 --Create Sproc
+--TODO Change DB Name
 USE [DBALogging]
 GO
-
-/*
-USE DBALogging;
-GO
-
-CREATE TABLE [dbo].[MemoryStats](
-	[ID] [int] IDENTITY(1,1) NOT NULL,
-	[DateTimeStamp] [datetime2](7) NULL,
-	[Memory_mount_point] [nvarchar](512) NULL,
-	[file_system_type] [nvarchar](512) NULL,
-	[logical_Memory_name] [nvarchar](512) NULL,
-	[Total_Size] [DECIMAL(19,2)] NULL,
-	[Available_Size] [DECIMAL(19,2)] NULL,
-	[Space_Free] [DECIMAL(19,2)] NULL,
-	
- CONSTRAINT [PK_MemoryStats] PRIMARY KEY CLUSTERED 
-(	[ID] ASC)
-WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-) ON [PRIMARY]
-
-GO
-*/
 
 CREATE PROCEDURE [dbo].[usp_GetMemoryStats] AS
 -- Version# Q319 Rev01
@@ -130,7 +104,7 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Memory Stats Monitoring', @step_name=N'
 		@retry_interval=0, 
 		@os_run_priority=0, @subsystem=N'TSQL', 
 		@command=N'exec dbo.usp_GetMemoryStats', 
-		@database_name=N'DBALogging', --make sure db name matches
+		@database_name=N'DBALogging', --TODO: Change DB Name
 		@flags=0
 GO
 USE [msdb]
@@ -146,7 +120,7 @@ EXEC msdb.dbo.sp_update_job @job_name=N'Memory Stats Monitoring',
 		@description=N'', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'', --enter operator name
+		@notify_email_operator_name=N'SH', --TODO: enter operator name
 		@notify_netsend_operator_name=N'', 
 		@notify_page_operator_name=N''
 GO
