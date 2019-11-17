@@ -1,35 +1,43 @@
 --#TODO: review string filters at bottom.
 --Can execute in a multiserver query
 --Execute in Grid mode
+use tempdb
+go
 
 declare @oldestdate as date, @now as datetime2(0)
-select @oldestdate = dateadd(month,-1, sysdatetime()), @now = sysdatetime() --must create a variable to be passed later on
+select @oldestdate = dateadd(month,-3, sysdatetime()), @now = sysdatetime() --Filter the time frame of the logs.
 
 select 'Getting errors since ' + cast(@oldestdate as varchar(30))
 
 --Get list of logs associated with the SQL Server (by default is 7, probably need more!) 
-DECLARE @SQLErrorLogList TABLE (
+CREATE TABLE #SQLErrorLogList (
     LogNumber INT NOT NULL,
     LogEndDate datetime2(0) NOT NULL,
     LogSize_b BIGINT NOT NULL);
+CREATE NONCLUSTERED INDEX IDX_CL_ell on #SQLErrorLogList (LogNumber) INCLUDE (LogEndDate);
 
-INSERT INTO @SQLErrorLogList
+INSERT INTO #SQLErrorLogList
 EXEC sys.sp_enumerrorlogs;
 
 --error messages in current log
-declare @readerrorlog table 
-( LogDate datetime not null 
-, LogProcessInfo nvarchar(255) not null 
-, [LogMessageText] nvarchar(4000) not null 
+create table #readerrorlog
+( LogDate datetime not null
+, LogProcessInfo varchar(255) not null 
+, [LogMessageText] varchar(1500) not null 
 )
-declare @lognumber int = 0, @endoflogfiles bit = 0
+
+CREATE CLUSTERED INDEX IDX_CL_rel on #readerrorlog (LogDate);
+
+declare @lognumber int = 0, @endoflogfiles bit = 0, @maxlognumber int = 0;
+
+select @maxlognumber =   MAX(LogNumber) from #SQLErrorLogList
 WHILE (
-		((Select LogEndDate from @SQLErrorLogList where @lognumber = LogNumber) > @oldestdate)
-		and @lognumber <= (SELECT MAX(LogNumber) from @SQLErrorLogList)
-		) --Include any logs from the last month
+		((Select LogEndDate from #SQLErrorLogList where @lognumber = LogNumber) > @oldestdate)
+		and @lognumber <= @maxlognumber
+		) 
 BEGIN
 
-	INSERT INTO @readerrorlog 
+	INSERT INTO #readerrorlog 
 	EXEC master.dbo.xp_readerrorlog  
 	  @lognumber		--current log file
 	, 1					--SQL Error Log
@@ -38,15 +46,20 @@ BEGIN
 	, @oldestdate, @now --time filter. Should be @oldestdate < @now
 	, N'desc'			--sort
 			
-	print 'including lognumber ' + str(@lognumber)
+	--print 'including lognumber ' + str(@lognumber)
 
 	set @lognumber = @lognumber + 1	
 END
+GO
 
+--UPDATE STATISTICS #readerrorlog 
+CREATE NONCLUSTERED INDEX IDX_NC_rel on #readerrorlog (Logdate desc, [LogMessageText]) INCLUDE( LogProcessInfo)
+
+GO
 --order of servers in a multiserver query is not determinant
 
 --Raw error list
-select * from @readerrorlog 
+select * from #readerrorlog 
 where  1=1
 and (	
 	LogMessageText like '%error%'
@@ -55,12 +68,15 @@ or	LogMessageText like '%failed%'
 or	LogMessageText like '%corrupt%'
 )
 and LogMessageText not like '%without errors%'
+and LogMessageText not like '%returned no errors%'
+and LogMessageText not like 'Registry startup parameters:%'
 and LogMessageText not like '%informational%'
+and LogMessageText not like '%found 0 errors%'
 order by LogDate desc;
 
 --Aggregate error counts
 select LogMessageText, LogProcessInfo, ErrorCount = count(LogDate), MostRecentOccurrence = max(LogDate) 
-from @readerrorlog 
+from #readerrorlog 
 where  1=1
 and (	
 	LogMessageText like '%error%'
@@ -69,9 +85,16 @@ or	LogMessageText like '%failed%'
 or	LogMessageText like '%corrupt%'
 )
 and LogMessageText not like '%without errors%'
+and LogMessageText not like '%returned no errors%'
+and LogMessageText not like 'Registry startup parameters:%'
 and LogMessageText not like '%informational%'
+and LogMessageText not like '%found 0 errors%'
 group by LogMessageText, LogProcessInfo
 order by count(LogDate) desc, max(LogDate) desc;
 
-SELECT Reboots = LogDate FROM @readerrorlog WHERE LogMessageText like 'Registry startup parameters:%'
-ORDER BY LogDate;
+SELECT Reboots = LogDate FROM #readerrorlog WHERE LogMessageText like 'Registry startup parameters:%'
+ORDER BY LogDate desc;
+GO
+
+drop table #readerrorlog
+drop table #SQLErrorLogList
