@@ -1,4 +1,4 @@
-
+--Run in Results to Text mode
 USE [master]
 GO
 select 
