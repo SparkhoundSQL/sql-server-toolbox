@@ -8,7 +8,7 @@
 	
 	WITH cteSR AS (
 	SELECT s.session_id, r.request_id, request_start_time= r.start_time, s.login_time, s.login_name, s.client_interface_name, session_status = s.status, request_status= r.status,command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,r.database_id,user_id,blocking_session_id,wait_type,r.last_wait_type, wait_time_s = r.wait_time/1000.,r.wait_resource ,cpu_time_s = r.cpu_time/1000.,tot_time_s = r.total_elapsed_time/1000.,r.reads,r.writes,r.logical_reads,percent_complete,estimated_completion_time	,s.[host_name], s.[program_name], session_transaction_isolation_level= s.transaction_isolation_level, request_transaction_isolation_level = r.transaction_isolation_level, Governor_Group_Id = s.group_id
-	, EndPointName= e.name, Protocol = e.Protocol_Desc	  -- this line sql2k16+ and patches of 14 and 12 only
+	, EndPointName= E.name, Protocol = E.protocol_desc	  -- this line sql2k16+ and patches of 14 and 12 only
 	FROM sys.dm_exec_sessions s 
 	LEFT OUTER JOIN sys.dm_exec_requests r on r.session_id = s.session_id
 	LEFT OUTER JOIN sys.endpoints E ON E.endpoint_id = s.endpoint_id  -- this line sql2k16+ and patches of 14 and 12 only
@@ -16,7 +16,7 @@
 	and s.session_id >= 50 --retrieve only user spids
 	--and s.session_id <> @@SPID --ignore myself
 	and	(@showallspids = 1 or r.session_id is not null) 
-	and	(@showinternalgroup = 1 or s.Group_Id > 1)
+	and	(@showinternalgroup = 1 or s.group_id > 1)
 	),
 	cteBL (session_id, blocking_these) AS 
 	(		select sr.session_id, blocking_these = x.blocking_these 
@@ -98,7 +98,7 @@
 		, Governor_Group_Name	=	wg.name
 		, Governor_Group_ID		=	r.Governor_Group_Id
 		, Governor_Pool_Name	=	wp.name 
-		, Governor_Pool_ID		=	wg.Pool_id
+		, Governor_Pool_ID		=	wg.pool_id
 		, EndPointName
 		, Protocol
 		, tempdb.Outstanding_TempDB_Session_Internal_Alloc_pages 
@@ -116,7 +116,7 @@
 													and r.statement_start_offset = stat.statement_start_offset  
 													and r.statement_end_offset = stat.statement_end_offset
 		LEFT OUTER JOIN sys.resource_governor_workload_groups  wg on wg.group_id = r.Governor_Group_Id
-		LEFT OUTER JOIN sys.resource_governor_resource_pools wp on wp.pool_id = wg.Pool_id
+		LEFT OUTER JOIN sys.resource_governor_resource_pools wp on wp.pool_id = wg.pool_id
 		LEFT OUTER JOIN (SELECT SU.session_id
 							, Outstanding_TempDB_Session_Internal_Alloc_pages = sum (SU.internal_objects_alloc_page_count) - sum (SU.internal_objects_dealloc_page_count)
 							, Outstanding_TempDB_Session_User_Alloc_pages = sum (SU.user_objects_alloc_page_count)	 - sum (SU.user_objects_dealloc_page_count)
