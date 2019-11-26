@@ -3,7 +3,7 @@
 --Execute in Grid mode
 use tempdb
 go
-
+select SYSDATETIMEOFFSET()
 declare @oldestdate as date, @now as datetime2(0)
 select @oldestdate = dateadd(month,-3, sysdatetime()), @now = sysdatetime() --Filter the time frame of the logs.
 
@@ -52,7 +52,6 @@ BEGIN
 END
 GO
 
---UPDATE STATISTICS #readerrorlog 
 CREATE NONCLUSTERED INDEX IDX_NC_rel on #readerrorlog (Logdate desc, [LogMessageText]) INCLUDE( LogProcessInfo)
 
 GO
