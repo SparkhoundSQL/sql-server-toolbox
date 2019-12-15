@@ -20,6 +20,7 @@ select
 ,	target_recovery_time_in_seconds
 ,	ProductMajorVersion				= SERVERPROPERTY('ProductMajorVersion')
 ,	is_trustworthy_on
+,	is_query_store_on --SQL 2016+ only
 into #DBSettings
 from sys.databases;
 
@@ -145,11 +146,23 @@ and [name] <> 'master'
 ORDER BY name;
 
 
---Databases should only have the Trustworthy setting enabled if necessary. The msdb system database is Trustworthy by default. 
+--Databases should only have the Trustworthy setting enabled if necessary. The msdb system database is Trustworthy by default. Note that this setting does not carry over when db is restored to another server.
 select 
 	[Database Name]			= name
 ,	is_trustworthy_on
 from #DBSettings
 where is_trustworthy_on = 1
 and name <> 'msdb'
+ORDER BY name;
+
+--Query Store should be enabled when possible
+--SQL2016+ only
+select 
+	[Database Name]			= name
+,	is_query_store_on
+,	[Alter]					= 'USE [master]; ALTER DATABASE ['+name+'] SET QUERY_STORE = ON; ALTER DATABASE ['+name+'] SET QUERY_STORE (OPERATION_MODE = READ_WRITE);'
+,	[Revert]				= 'USE [master]; ALTER DATABASE ['+name+'] SET QUERY_STORE = OFF;'
+from #DBSettings
+where is_query_store_on = 0
+and [name] not in('master','msdb','tempdb','model') 
 ORDER BY name;
