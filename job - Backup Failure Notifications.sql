@@ -7,7 +7,7 @@ GO
 
 CREATE PROCEDURE [dbo].[BackupFailureNotification] 
 as
--- Version# Q3 Rev01
+-- Version# Q319 Rev01
 --	  @database_name nvarchar(512)
 --	, @backuptype nvarchar(50)
 --	, @recovery_model_desc nvarchar(50)

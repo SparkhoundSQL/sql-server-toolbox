@@ -83,7 +83,8 @@ EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'File Gro
 		@retry_attempts=0, 
 		@retry_interval=0, 
 		@os_run_priority=0, @subsystem=N'TSQL', 
-		@command=N'DECLARE @TempTable TABLE
+		@command=N'Version# Q419 Rev01
+		DECLARE @TempTable TABLE
 (ID INT Identity(1,1) not null,
 DatabaseName varchar(128)
 ,recovery_model_desc varchar(50)
