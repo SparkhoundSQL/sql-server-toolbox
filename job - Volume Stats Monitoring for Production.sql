@@ -23,14 +23,10 @@ CREATE TABLE [dbo].[VolumeStats](
 GO
 
 --Create Sproc
-
 CREATE PROCEDURE [dbo].[Get_VolumeStats]
-@Threshold decimal(19,2) --re-enabled by WFC 06212019
+@Threshold decimal(19,2) 
 AS
 BEGIN
---Version# Q319 Rev01
-
---Changed all floats and decimal(18,2) to decimal(19,2) - WDA 20170312
 DECLARE @VolumeStats TABLE
 (ID int not null identity(1,1),
 volume_mount_point nvarchar(512),
@@ -67,21 +63,16 @@ FETCH NEXT FROM VolumeInfo INTO @volume,@file_system_type,@logical_name,@TotalSi
 WHILE (@@FETCH_STATUS <> -1)
 BEGIN
 
---if @percent > 20 -- changed 20170312 WDA
-if @percent <= 14 --changed CLL 20190329 --If free space % is less than 20% --- changed by to @Threshold parameter which is passed via the Agent Job.  This way you don't have to change the Sproc just the job
+if @percent <= @Threshold 
 BEGIN
-    INSERT INTO dbo.VolumeStats(
-DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed
-)
+    INSERT INTO dbo.VolumeStats(DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed)
     values(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
     insert into @VolumeStats (volume_mount_point,file_system_type,logical_volume_name,Total_Size,Available_Size,Space_Free,DateTimePerformed)
     VALUES(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
 END
 else
 BEGIN
-    INSERT INTO dbo.VolumeStats(
-DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed
-)
+    INSERT INTO dbo.VolumeStats(DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed)
     values(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
 
 END
@@ -91,10 +82,8 @@ END
 CLOSE VolumeInfo
 DEALLOCATE VolumeInfo
 
-if (SELECT COUNT(*) FROM @VolumeStats 
-where logical_volume_name <> 'TempDBdata' --added to ignore the tempdb drive - 20170311 WDA 
-) > 0
-BEGIN --added BEGIN/END wrap on IF - WDA 20170312 
+if (SELECT COUNT(*) FROM @VolumeStats where logical_volume_name <> 'TempDBdata' ) > 0
+BEGIN  
 	DECLARE @tableHTML  NVARCHAR(MAX) ;  
   
 	SET @tableHTML =  
@@ -118,8 +107,8 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 		N'</table>' ;  
   
 	BEGIN
-	if @percent > 2
-	 AND @percent < @Threshold -- removed WDA 20170418 --changed CLL 20190329
+	if @percent > 1
+	 AND @percent < @Threshold 
 	BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
 		   @profile_name = 'whatever', --TODO
@@ -131,7 +120,7 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 	END
 	END
 	BEGIN
-	if @percent < 2 -- removed WDA 20170418 --changed CLL 20190329
+	if @percent < 1	
 	BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
 		   @profile_name = 'whatever', --TODO
@@ -184,8 +173,8 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Volume Stats Monitoring', @step_name=N'
 		@retry_attempts=0, 
 		@retry_interval=0, 
 		@os_run_priority=0, @subsystem=N'TSQL', 
-		@command=N'exec dbo.Get_VolumeStats @Threshold = 14;', 
-		@database_name=N'DBALogging', --make sure db name matches
+		@command=N'exec dbo.Get_VolumeStats @Threshold = 14;', --Default threshold of 14, change if desired in the job step
+		@database_name=N'DBALogging', --TODO: make sure db name matches
 		@flags=0
 GO
 USE [msdb]
@@ -201,7 +190,7 @@ EXEC msdb.dbo.sp_update_job @job_name=N'Volume Stats Monitoring',
 		@description=N'', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'', --enter operator name
+		@notify_email_operator_name=N'', --TODO: enter operator name
 		@notify_netsend_operator_name=N'', 
 		@notify_page_operator_name=N''
 GO
