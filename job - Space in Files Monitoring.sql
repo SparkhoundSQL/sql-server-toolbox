@@ -29,8 +29,7 @@ CREATE PROCEDURE [dbo].[Get_Space_in_Files]
 @Threshold decimal(9,2)
 AS
 BEGIN
---Version# Q319 Rev01
---Changed all floats and decimal(18,2) to decimal(19,2) - WDA 20170312
+--Version# Q419 Rev01
 
 DECLARE @TimeStamp datetimeoffset(2) = sysdatetimeoffset()
 
@@ -75,7 +74,8 @@ SELECT
 delete from @SpaceInFiles where [FreePercent] > @Threshold
 
 INSERT INTO [Space_in_Files] (DatabaseName,recovery_model_desc  ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent )
-SELECT DatabaseName,recovery_model_desc  ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent  FROM @SpaceInFiles;
+SELECT DatabaseName,recovery_model_desc  ,DatabaseFileName  ,FileLocation  ,FileId ,FileSizeMB ,SpaceUsedMB,AvailableMB,FreePercent  FROM @SpaceInFiles s
+WHERE DatabaseName not in ('model');
 
 if (SELECT COUNT(*) FROM @SpaceInFiles) > 0
 BEGIN --added BEGIN/END wrap on IF - WDA 20170312 
