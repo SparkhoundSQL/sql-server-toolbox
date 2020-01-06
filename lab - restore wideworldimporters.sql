@@ -1,5 +1,5 @@
 --AdventureWorks latest download
---https://github.com/Microsoft/sql-server-samples/releases/tag/adventureworks
+--https://docs.microsoft.com/sql/samples/wide-world-importers-oltp-install-configure
 
 USE [master]
 GO
