@@ -6,8 +6,8 @@ SELECT
 	mid.statement 
 /* --This block SQL 2017+ only
 ,	create_index_statement_2017 =	'CREATE NONCLUSTERED INDEX IDX_NC_' + replace(t.name, ' ' ,'')
-	+ TRANSLATE(ISNULL(replace(mid.equality_columns, ' ' ,''),'') , '],[' ,' _ ') --Translate is only supported for SQL 2017+
-	+ TRANSLATE(ISNULL(replace(mid.inequality_columns, ' ' ,''),''), '],[' ,' _ ')
+	+ TRANSLATE(ISNULL(replace(mid.equality_columns, ' ' ,''),'') , '],[' ,'___') --Translate is only supported for SQL 2017+
+	+ TRANSLATE(ISNULL(replace(mid.inequality_columns, ' ' ,''),''), '],[' ,'___')
 	+ ' ON ' + statement 
 	+ ' (' + ISNULL (mid.equality_columns,'') 
     + CASE WHEN mid.equality_columns IS NOT NULL AND mid.inequality_columns IS NOT NULL THEN ', ' ELSE '' END 
