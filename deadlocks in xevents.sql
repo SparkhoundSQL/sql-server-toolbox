@@ -1,31 +1,6 @@
 --deadlocks in XEvents 
 --updated 20171003 WDA
 
-
-WITH cteDeadLocks ([Deadlock_XML]) AS (
-  --Query RingBufferTarget
-  SELECT [Deadlock_XML] = CAST(target_data AS XML) 
-  FROM sys.dm_xe_sessions AS xs
-  INNER JOIN sys.dm_xe_session_targets AS xst 
-  ON xs.[address] = xst.event_session_address
-  WHERE xs.[name] = 'system_health'
-  AND xst.target_name = 'ring_buffer'
- )
-SELECT 
-  Deadlock_XML = x.Graph.query('(event/data/value/deadlock)[1]')  --View as XML for detail, save this output as .xdl and re-open in SSMS for visual graph
-, Occured = x.Graph.value('(event/data/value/deadlock/process-list/process/@lastbatchstarted)[1]', 'datetime2(3)') --date the last batch in the first process started, only an approximation of time of deadlock
-, DB = DB_Name(x.Graph.value('(event/data/value/deadlock/process-list/process/@currentdb)[1]', 'int')) --Current database of the first listed process 
-FROM (
- SELECT Graph.query('.') AS Graph 
- FROM cteDeadLocks c
- CROSS APPLY c.[Deadlock_XML].nodes('RingBufferTarget/event[@name="xml_deadlock_report"]') AS Deadlock_Report(Graph)
-) AS x
-ORDER BY Occured desc
-
-GO
-/*
---Read from .xel file instead of ring_buffer - slower, potentially fewer skipped rows
-
 DECLARE @SessionName SysName = 'system_health'
 
 IF OBJECT_ID('tempdb..#Events') IS NOT NULL BEGIN
@@ -107,5 +82,30 @@ FROM
 		LEFT JOIN Victims v ON v.DeadlockID = e.DeadlockID AND v.VictimID = Deadlock.Process.value('@id', 'varchar(50)')
 ) X --In a subquery to make filtering easier (use column names, not XML parsing), no other reason
 ORDER BY DeadlockID DESC
+
+/*
+--Read from ring_buffer instead of .xel file - faster, potentially skipped rows
+
+WITH cteDeadLocks ([Deadlock_XML]) AS (
+  --Query RingBufferTarget
+  SELECT [Deadlock_XML] = CAST(target_data AS XML) 
+  FROM sys.dm_xe_sessions AS xs
+  INNER JOIN sys.dm_xe_session_targets AS xst 
+  ON xs.[address] = xst.event_session_address
+  WHERE xs.[name] = 'system_health'
+  AND xst.target_name = 'ring_buffer'
+ )
+SELECT 
+  Deadlock_XML = x.Graph.query('(event/data/value/deadlock)[1]')  --View as XML for detail, save this output as .xdl and re-open in SSMS for visual graph
+, Occured = x.Graph.value('(event/data/value/deadlock/process-list/process/@lastbatchstarted)[1]', 'datetime2(3)') --date the last batch in the first process started, only an approximation of time of deadlock
+, DB = DB_Name(x.Graph.value('(event/data/value/deadlock/process-list/process/@currentdb)[1]', 'int')) --Current database of the first listed process 
+FROM (
+ SELECT Graph.query('.') AS Graph 
+ FROM cteDeadLocks c
+ CROSS APPLY c.[Deadlock_XML].nodes('RingBufferTarget/event[@name="xml_deadlock_report"]') AS Deadlock_Report(Graph)
+) AS x
+ORDER BY Occured desc
+
+GO
 
 */
