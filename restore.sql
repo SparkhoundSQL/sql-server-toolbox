@@ -24,9 +24,7 @@ fix orpahned sids.sql
  
 
 /*
-
 --Example: Restore WWI sample DB
-
 USE [master]
 --https://github.com/Microsoft/sql-server-samples/tree/master/samples/databases/wide-world-importers
 ALTER DATABASE [WideWorldImporters] SET SINGLE_USER WITH ROLLBACK IMMEDIATE
