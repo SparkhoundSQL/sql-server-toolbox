@@ -1,14 +1,14 @@
 --Worst query plans in cache
---To find the worst queries and their plan(s), use Query Store (SQL 2016+)
+--To find the worst queries and their plan(s), strongly advised to use use Query Store (SQL 2016+)
 --Table to capture this data at bottom
 
 --INSERT INTO dbo.worstqueryplans
 SELECT TOP 15 *
-, Average_cpu						=	convert(decimal(19,2), tot_cpu_ms)/convert(decimal(19,2),usecounts)
-, Average_Duration					=	convert(decimal(19,2),tot_duration_ms)/convert(decimal(19,2),usecounts)
-, WorstQueryPlansObservedWhen		=	sysdatetime()
-, DeleteQueryPlan					= 'ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE '+convert(varchar(512),PlanHandle,1) --delete just this plan, works in Azure SQL or SQL 2016+
---, DeleteQueryPlan	= 'DBCC FREEPROCCACHE('+convert(varchar(512),PlanHandle,1)+')'  --delete just this plan (old syntax)
+, Average_cpu_ms						=	convert(decimal(19,2), tot_cpu_ms)/convert(decimal(19,2),usecounts)
+, Average_Duration_ms					=	convert(decimal(19,2),tot_duration_ms)/convert(decimal(19,2),usecounts)
+, WorstQueryPlansObservedWhen		=	sysdatetimeoffset()
+, DeleteQueryPlan_SQL2016_above		= 'ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE '+convert(varchar(512),PlanHandle,1) +';'--delete just this plan, works in Azure SQL or SQL 2016+
+, DeleteQueryPlan_SQL2014_below		= 'DBCC FREEPROCCACHE ('+convert(varchar(512),PlanHandle,1) +');'--delete just this plan, older syntax
 FROM 
 (
 	SELECT 
@@ -109,9 +109,9 @@ CREATE TABLE [dbo].[worstqueryplans](
 	[stmt_text] [nvarchar](max) NULL,
 	[ReasonforEarlyTermination] varchar(50) NULL,
 	[QueryPlan] [xml] NULL,
-	[Average_cpu] [decimal](38, 19) NULL,
-	[Average_Duration] [decimal](38, 19) NULL,
-	[ObservedWhen] [datetimeoffset] NOT NULL CONSTRAINT DF_worstqueryplans_ObservedWhen DEFAULT (SYSDATETIMEOFFSET())
+	[Average_cpu_ms] [decimal](38, 19) NULL,
+	[Average_Duration_ms] [decimal](38, 19) NULL,
+	[ObservedWhen] [datetimeoffset](2) NOT NULL CONSTRAINT DF_worstqueryplans_ObservedWhen DEFAULT (SYSDATETIMEOFFSET())
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
