@@ -21,3 +21,16 @@ left outer join sys.indexes i on i.object_id = o.object_id and i.index_id = p.in
 WHERE o.is_ms_shipped = 0
 
 order by SizeMb desc
+
+/* --Estimate size savings with compression using 
+--Example:
+use [database]
+go
+exec sp_estimate_data_compression_savings  
+      @schema_name =  'dbo'   
+   ,  @object_name =  'whatevertable'  
+   ,  @index_id = null --null for all indexes on table, or try a specific index. The compression savings will vary.
+   ,  @partition_number =  null --specify partitions if applicable
+   ,  @data_compression =  'PAGE'; --or ROW, or for columnstore, can use COLUMNSTORE
+
+*/
