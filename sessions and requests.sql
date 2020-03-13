@@ -1,5 +1,5 @@
 --!!! Note: Different version of this query for Azure SQL DB !!!
-
+-- See also toolbox\blocked processes report xevents.sql to capture blocking chains using the blocked process report.
 --	print 'start ' + cast(sysdatetime() as varchar(20))
 	declare @showallspids bit, @showinternalgroup bit 
 	select	@showallspids = 1-- 1= show all sessions, 0= show only active requests
