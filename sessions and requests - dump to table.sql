@@ -1,3 +1,5 @@
+-- See also toolbox\blocked processes report xevents.sql to capture blocking chains using the blocked process report.
+
 USE DBALogging 
 GO
 DROP TABLE 
