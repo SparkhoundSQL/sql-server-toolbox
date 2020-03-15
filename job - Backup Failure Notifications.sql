@@ -2,12 +2,12 @@
 --      Update Stored procedure verion after modification
 
 --create proc
-USE [DBAHound] --TODO
-GO
+USE [DBALogging]
+GO  
 
 CREATE PROCEDURE [dbo].[BackupFailureNotification] 
 as
--- Version# Q319 Rev01
+-- Version# March 2020 Rev02
 --	  @database_name nvarchar(512)
 --	, @backuptype nvarchar(50)
 --	, @recovery_model_desc nvarchar(50)
@@ -115,18 +115,15 @@ BEGIN
 	DECLARE @tableLog  NVARCHAR(MAX) ;    
   
 	SET @tableData =  
-		N'<H3>Full Backups (databases without backups in the last 7 days): </H3>' +  
+		N'<H3><P>Full Backups (databases without backups in the last 7 days): <P></H3>' +  
 		N'<table border="1">' +  
-		N'<tr><th>Database</th><th>Latest Backup</th>' +  
-		N'<th>Recovery Model</th><th>Backup Type</th>' +  
-		N'<th>State</th><th>Location</th>' +   
+		N'<tr><th>Database </th><th>LatestBackup </th>' +  
+		N'<th>RecoveryModel </th><th>BackupType </th>' +  
 		CAST ( ( SELECT
-				 td = b.database_name ,  '',
-				 td = ISNULL(b.LatestBackupDate, 0000-00-00),  '',
-				 td = b.recovery_model_desc  , '',
-				 td = b.backuptype  , '',
-				 td = b.state_desc , '' ,
-				 td = ISNULL(b.LatestBackupLocation, 'NULL')  , ''
+				 td = b.database_name ,  ' ',
+				 td = ISNULL(b.LatestBackupDate, 0000-00-00),  ' ',
+				 td = b.recovery_model_desc  , ' ',
+				 td = b.backuptype  
 				from #BackupFailureFULL b
 				where b.backuptype = 'Database'
 				order by b.backuptype, b.LatestBackupDate 
@@ -135,18 +132,15 @@ BEGIN
 		N'</table>' ;  
 
 	SET @tableLog =  
-		N'<H3>Transaction Log Backups (databases without Transaction Log Backups in the last 2 hours): </H3>' +  
+		N'<H3><P>Transaction Log Backups (databases without Transaction Log Backups in the last 2 hours): <P></H3>' +  
 		N'<table border="1">' +  
-		N'<tr><th>Database</th><th>Latest Backup</th>' +  
-		N'<th>Recovery Model</th><th>Backup Type</th>' +  
-		N'<th>State</th><th>Location</th>' +   
+		N'<tr><th>Database </th><th>LatestBackup </th>' +  
+		N'<th>RecoveryModel </th><th>BackupType </th>' +  
 		CAST ( ( SELECT
-				 td = b.database_name ,  '',
-				 td = ISNULL(b.LatestBackupDate, 0000-00-00),  '',
-				 td = b.recovery_model_desc  , '',
-				 td = b.backuptype  , '',
-				 td = b.state_desc , '' ,
-				 td = ISNULL(b.LatestBackupLocation, 'NULL')  , ''
+				 td = b.database_name ,  ' ',
+				 td = ISNULL(b.LatestBackupDate, 0000-00-00),  ' ',
+				 td = b.recovery_model_desc  , ' ',
+				 td = b.backuptype  
 				from #BackupFailureFULL b
 				where b.backuptype = 'Transaction Log'
 				order by b.backuptype, b.LatestBackupDate 
@@ -160,10 +154,11 @@ BEGIN
 	SET @nBody = CASE 
 						WHEN (SELECT COUNT(*) FROM #BackupFailureFULL WHERE backuptype = 'Database') = 0 THEN 'The following databases have recently missed backups and should be investigated:' + @tableLog
 						WHEN (SELECT COUNT(*) FROM #BackupFailureFULL WHERE backuptype = 'Transaction Log') = 0 THEN 'The following databases have recently missed backups and should be investigated:' + @tableData
-				 ELSE 'The following databases have recently missed backups and should be investigated:' + @tableData + @tableLog END
+				 ELSE 'The following databases have recently missed backups and should be investigated:
+				 <P>' + @tableData + @tableLog END
 	SET @nServer = 'Backup Failure on ' + @@SERVERNAME
 		EXEC msdb.dbo.sp_send_dbmail 
-		   @profile_name  = 'whatever' , --TODO: change profile_name and recipinets below, per server
+		   @profile_name  = 'profilename' , --TODO: change profile_name and recipinets below, per server
 		   @recipients = 'sql.alerts@sparkhound.com', 
 		   @body =  @nBody,
 		   @body_format ='HTML',
@@ -172,7 +167,7 @@ BEGIN
 	END
 	END
 ;
-GO
+GO 
 --exec dbo.BackupFailureNotification
 
 
