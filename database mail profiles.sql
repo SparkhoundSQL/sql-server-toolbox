@@ -1,6 +1,13 @@
 --http://www.sqlservercentral.com/scripts/Mail+Profile/171566/
 USE msdb 
 GO 
+
+SELECT p.profile_id, p.name
+FROM msdb.dbo.sysmail_profileaccount pa 
+INNER JOIN msdb.dbo.sysmail_profile p ON pa.profile_id = p.profile_id 
+INNER JOIN msdb.dbo.sysmail_account a ON pa.account_id = a.account_id   
+				
+GO
  
 Declare @TheResults varchar(max), 
         @vbCrLf CHAR(2) 
