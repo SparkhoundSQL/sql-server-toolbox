@@ -1,3 +1,5 @@
+--TODO Set current database context to desired database.
+
 --Execute this version of the script for the current desired database context only.
 --Look below for an all-databases version that cannot build the CREATE statement.
 --Demo lab script to generate a missing index suggestion: toolbox\lab - missing index setup demo.sql

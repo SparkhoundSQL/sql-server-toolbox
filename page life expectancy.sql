@@ -1,3 +1,4 @@
+use TempDB
 
 select 
 	p.InstanceName

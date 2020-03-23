@@ -1,8 +1,10 @@
+Use TempDB
+
 IF OBJECT_ID('tempdb..#DBSettings') IS NOT NULL
     BEGIN
 	   DROP TABLE #DBSettings;
     END;
-GO
+
 select 
 	name
 ,	[compatibility_level]	

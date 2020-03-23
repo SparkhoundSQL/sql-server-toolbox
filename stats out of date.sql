@@ -1,12 +1,10 @@
---This script only works in SQL2008R2SP2+ or SQL2012SP1+. Works in Azure SQL DB.
-
+--TODO Set current database context to desired database.
 --This only checks current database context.
 --Use toolbox\stats out of date whileloop.sql to scan all databases.
 
 --TODO BEFORE EXECUTING: comment out three lines below in <SQL2014 because incremental stastics not supported.
---https://msdn.microsoft.com/en-us/library/jj553546.aspx
---http://sqlperformance.com/2014/02/sql-statistics/2014-incremental-statistics
---https://connect.microsoft.com/SQLServer/feedback/details/468517/update-statistics-at-the-partition-level
+
+--This script only works in SQL2008R2SP2+ or SQL2012SP1+. Works in Azure SQL DB.
 
 	 SELECT distinct
 			s.name AS SchemaName 
@@ -72,3 +70,6 @@
 	*/
 
 
+--https://msdn.microsoft.com/en-us/library/jj553546.aspx
+--http://sqlperformance.com/2014/02/sql-statistics/2014-incremental-statistics
+--https://connect.microsoft.com/SQLServer/feedback/details/468517/update-statistics-at-the-partition-level

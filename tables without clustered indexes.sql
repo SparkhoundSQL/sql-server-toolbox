@@ -1,3 +1,5 @@
+--TODO Set current database context to desired database.
+
 --Doesn't work on 2000 databases or databases in 2000 compatability mode.  
 
 select 
