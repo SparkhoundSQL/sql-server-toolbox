@@ -1,14 +1,79 @@
 --Worst query plans in cache
---To find the worst queries and their plan(s), strongly advised to use use Query Store (SQL 2016+)
+
+--TODO Set @targetdb database if desired.
+--TODO BEFORE running, go to settings in SSMS, Query Results, SQL Server, Results to Grid, set Maximum Characters Retrieved for XML to Unlimited. Then open this file in a new query window.
+
+USE [tempdb]
+GO
+DECLARE @targetdb sysname = null --Set to NULL to return ALL databases. Change database name to target database if desired  
+--Example, DECLARE @targetdb sysname = 'WideWorldImporters'
+
+--To find the worst queries and their plan(s), strongly advised to use the superior Query Store feature in SQL 2016+
 --Table to capture this data at bottom
 
---INSERT INTO dbo.worstqueryplans
-SELECT TOP 15 *
+IF OBJECT_ID('tempdb..#worstqueryplans') IS NOT NULL
+    BEGIN
+		print 'dropping temp table'
+	   DROP TABLE [#worstqueryplans];
+    END;
+
+
+CREATE TABLE [dbo].[#worstqueryplans](
+	[rownum] bigint NULL,
+	[CpuRank] [bigint] NULL,
+	[PhysicalReadsRank] [bigint] NULL,
+	[DurationRank] [bigint] NULL,
+	[dbname] [nvarchar](128) NULL,
+	[cacheobjtype] [nvarchar](35) NULL,
+	[usecounts] [int] NOT NULL,
+	[size_in_kb] [int] NULL,
+	[tot_cpu_ms] [bigint] NULL,
+	[tot_duration_ms] [bigint] NULL,
+	[total_physical_reads] [bigint] NOT NULL,
+	[total_logical_writes] [bigint] NOT NULL,
+	[total_logical_reads] [bigint] NOT NULL,
+	[last_execution_time] [datetimeoffset](2) NULL,
+	[objectid] [int] NULL,
+	[Procedure_name] [nvarchar](75) NULL,
+	[stmt_text] [nvarchar](max) NULL,
+	[ReasonforEarlyTermination] varchar(50) NULL,
+	[Average_cpu_ms] [decimal](19, 2) NULL,
+	[Average_Duration_ms] [decimal](19, 2) NULL,
+	[DeleteQueryPlan_SQL2016_above]	varchar(500) NULL,
+	[DeleteQueryPlan_SQL2014_below]	varchar(500) NULL,	
+	[PlanHandle] varbinary(64) NULL,
+	[QueryPlan] [xml] NULL,
+	[ObservedWhen] [datetimeoffset](2) NOT NULL 
+	
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+INSERT INTO #worstqueryplans
+SELECT TOP 15 
+  rownum = row_number() OVER(ORDER BY CpuRank + PhysicalReadsRank + DurationRank asc)
+, x.CpuRank
+, x.PhysicalReadsRank
+, x.DurationRank
+, x.dbname
+, x.cacheobjtype
+, x.usecounts
+, x.size_in_kb
+, x.tot_cpu_ms
+, x.tot_duration_ms
+, x.total_physical_reads
+, x.total_logical_writes
+, x.total_logical_reads
+, x.last_execution_time
+, x.objectid
+, x.[Procedure_name]
+, x.stmt_text
+, x.ReasonforEarlyTermination
 , Average_cpu_ms						=	convert(decimal(19,2), tot_cpu_ms)/convert(decimal(19,2),usecounts)
 , Average_Duration_ms					=	convert(decimal(19,2),tot_duration_ms)/convert(decimal(19,2),usecounts)
-, WorstQueryPlansObservedWhen		=	sysdatetimeoffset()
 , DeleteQueryPlan_SQL2016_above		= 'ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE '+convert(varchar(512),PlanHandle,1) +';'--delete just this plan, works in Azure SQL or SQL 2016+
 , DeleteQueryPlan_SQL2014_below		= 'DBCC FREEPROCCACHE ('+convert(varchar(512),PlanHandle,1) +');'--delete just this plan, older syntax
+, x.PlanHandle
+, x.QueryPlan
+, [ObservedWhen] = SYSDATETIMEOFFSET()
 FROM 
 (
 	SELECT 
@@ -33,8 +98,8 @@ FROM
 		, ReasonforEarlyTermination = CASE WHEN tqp.query_plan LIKE '%StatementOptmEarlyAbortReason%' 
 											THEN substring(substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21), 1, ISNULL(ABS(charindex('"',substring(tqp.query_plan, charindex('EarlyAbortReason', tqp.query_plan,1)+18, 21),1)-1),0))
 											ELSE NULL END 
-		, QueryPlan			=	qp.query_plan	
 		, PlanHandle		=	p.plan_handle
+		, QueryPlan			=	qp.query_plan
 		FROM 
 		(
 		  SELECT 
@@ -63,10 +128,43 @@ FROM
 		  --and (sql.text like '%SH_View_Utilization_Detail%' )
 		  --AND (tqp.query_plan LIKE '%StatementOptmEarlyAbortReason="TimeOut%' or tqp.query_plan LIKE '%StatementOptmEarlyAbortReason="Memory Limit%')
 ) x
---WHERE dbname = N'whateverdatabasename'
+WHERE dbname = @targetdb or @targetdb is null
 ORDER BY CpuRank + PhysicalReadsRank + DurationRank asc; 
 
---select * from dbo.worstqueryplans
+select 
+  rownum  
+, CpuRank
+, PhysicalReadsRank
+, DurationRank
+, dbname
+, cacheobjtype
+, usecounts
+, size_in_kb
+, tot_cpu_ms
+, tot_duration_ms
+, total_physical_reads
+, total_logical_writes
+, total_logical_reads
+, last_execution_time
+, objectid
+, [Procedure_name]
+, stmt_text
+, ReasonforEarlyTermination
+, Average_cpu_ms				
+, Average_Duration_ms			
+, DeleteQueryPlan_SQL2016_above	
+, DeleteQueryPlan_SQL2014_below	
+, PlanHandle
+, [ObservedWhen]
+from #worstqueryplans;
+
+select rownum, [QueryPlan (Open and Save as .sqlplan files individually)] = QueryPlan from #worstqueryplans;
+
+IF OBJECT_ID('tempdb..#worstqueryplans') IS NOT NULL
+    BEGIN
+		print 'dropping temp table'
+	   DROP TABLE [#worstqueryplans];
+    END;
 
 /*----------------
 --For SQL 2000 only
@@ -76,14 +174,7 @@ FROM syscacheobjects
 ORDER BY dbid,usecounts DESC,objtype
 GO
 -----------------*/
-/*
---Samples to clear plans out of the plan cache
 
-ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE; --delete all plans, works in Azure SQL or SQL 2016+
-
-ALTER DATABASE SCOPED CONFIGURATION CLEAR PROCEDURE_CACHE 0x060001004EE9FD0570E185E06F02000001000000000000000000000000000000000000000000000000000000 --delete just this plan, works in Azure SQL or SQL 2016+
-
-*/
 /*
 --table to capture this data
 
@@ -91,9 +182,11 @@ USE [tempdb]
 GO
 DROP TABLE IF EXISTS [dbo].[worstqueryplans]
 CREATE TABLE [dbo].[worstqueryplans](
+	[ObservedWhen] [datetimeoffset](2) NOT NULL CONSTRAINT DF_worstqueryplans_ObservedWhen DEFAULT (SYSDATETIMEOFFSET())
 	[CpuRank] [bigint] NULL,
 	[PhysicalReadsRank] [bigint] NULL,
 	[DurationRank] [bigint] NULL,
+	[dbname] [nvarchar](128) NULL,
 	[cacheobjtype] [nvarchar](35) NULL,
 	[usecounts] [int] NOT NULL,
 	[size_in_kb] [int] NULL,
@@ -103,17 +196,18 @@ CREATE TABLE [dbo].[worstqueryplans](
 	[total_logical_writes] [bigint] NOT NULL,
 	[total_logical_reads] [bigint] NOT NULL,
 	[last_execution_time] [datetimeoffset] NULL,
-	[dbname] [nvarchar](128) NULL,
 	[objectid] [int] NULL,
 	[procname] [nvarchar](75) NULL,
 	[stmt_text] [nvarchar](max) NULL,
 	[ReasonforEarlyTermination] varchar(50) NULL,
-	[QueryPlan] [xml] NULL,
 	[Average_cpu_ms] [decimal](38, 19) NULL,
 	[Average_Duration_ms] [decimal](38, 19) NULL,
-	[ObservedWhen] [datetimeoffset](2) NOT NULL CONSTRAINT DF_worstqueryplans_ObservedWhen DEFAULT (SYSDATETIMEOFFSET())
+	[DeleteQueryPlan_SQL2016_above]	varchar(500) NULL,
+	[DeleteQueryPlan_SQL2014_below]	varchar(500) NULL,	
+	[PlanHandle] varbinary(64) NULL
+	[QueryPlan] [xml] NULL,
+
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-
 */
 
