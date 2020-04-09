@@ -26,7 +26,7 @@ ORDER BY MB_written desc, MB_read desc --activity level
 
 /*
 
-USE DBAHound
+USE DBALogging
 GO
 --Setup Logging Table
 CREATE TABLE dbo.record_dm_io_virtual_file_stats

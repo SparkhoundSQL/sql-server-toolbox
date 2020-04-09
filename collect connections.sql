@@ -1,6 +1,6 @@
 	/*
 
-USE [DBAHound]
+USE [DBALogging]
 GO
 DROP TABLE [dbo].[ExecRequests_connections]
 GO

@@ -2,7 +2,7 @@
 --Intention is to catch only severe errors and startup failures
 --Specifically because before Service Broker starts, some error Alerts may not send emails. This script waits one minute, checks log, sends email regardless.
 
---Find two TODO's for changing the name of the DBAHound db local to the server
+--Find two TODO's for changing the name of the DBALogging db local to the server
 --Find two TODO's for mail profile and recipient near bottom of job
 
 USE DBALogging   --TODO verify this database name

@@ -260,14 +260,14 @@ BEGIN TRY
 								END
 							IF @command <> ''
 							BEGIN
-								INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
+								INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, Command, ObjectName, BeginTimeStamp, StartWindow, EndWindow, TestMode)
 								SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @objectname + '].[' + @schemaname + ']', getdate(), @StartWindow, @EndWindow, @TestMode
 						
 								BEGIN TRY 
 									IF @testmode = 0 EXEC (@command);
 
 									PRINT N'Executed:  ' + @command
-									UPDATE DBAHound.dbo.IndexMaintLog 
+									UPDATE DBALogging.dbo.IndexMaintLog 
 									SET EndTimeStamp = Getdate()
 									,	Duration_s = datediff(s, BeginTimeStamp, getdate())
 									where id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -275,7 +275,7 @@ BEGIN TRY
 								END TRY 
 								BEGIN CATCH
 									Print N'Error: ' + ERROR_MESSAGE()
-									UPDATE DBAHound.dbo.IndexMaintLog 
+									UPDATE DBALogging.dbo.IndexMaintLog 
 									SET ErrorMessage = cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE()
 									where id = SCOPE_IDENTITY() and EndTimeStamp is null
 								END CATCH
@@ -304,15 +304,15 @@ BEGIN TRY
 	
 	END TRY
 	BEGIN CATCH
-		INSERT INTO DBAHound.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
+		INSERT INTO DBALogging.dbo.IndexMaintLog (CurrentDatabase, ErrorMessage , BeginTimeStamp, TestMode)
 		SELECT DB_NAME(), cast(ERROR_NUMBER() as char(9)) + ERROR_MESSAGE(),  getdate(), @TestMode
 						
 	END CATCH
 GO
 
 /*
-DROP TABLE DBAHound.dbo.IndexMaintLog;
-CREATE TABLE DBAHound.dbo.IndexMaintLog
+DROP TABLE DBALogging.dbo.IndexMaintLog;
+CREATE TABLE DBALogging.dbo.IndexMaintLog
 (	id int not null identity(1,1) PRIMARY KEY
 ,	CurrentDatabase sysname not null DEFAULT (DB_NAME())
 ,	Command nvarchar(1000) null
@@ -327,6 +327,6 @@ CREATE TABLE DBAHound.dbo.IndexMaintLog
 )
 
 
-select * from DBAHound.dbo.indexmaintlog
+select * from DBALogging.dbo.indexmaintlog
 
 */
