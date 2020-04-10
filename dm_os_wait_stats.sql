@@ -118,11 +118,11 @@ GO
 /*
 
 --Script to setup capturing these statistics over time
---Assumes a DBAAdmin database has been created
+--Assumes a DBALogging database has been created
 
-drop table dbaadmin.dbo.sys_dm_os_wait_stats 
+drop table DBALogging.dbo.sys_dm_os_wait_stats 
 
-create table dbaadmin.dbo.sys_dm_os_wait_stats 
+create table DBALogging.dbo.sys_dm_os_wait_stats 
 (	id int not null IDENTITY(1,1) 
 ,	datecapture datetimeoffset(2) not null
 ,	wait_Type nvarchar(512) not null
@@ -131,7 +131,7 @@ create table dbaadmin.dbo.sys_dm_os_wait_stats
 ,	CONSTRAINT PK_sys_dm_os_wait_stats PRIMARY KEY CLUSTERED (id)
 )
 
-insert into dbaadmin.dbo.sys_dm_os_wait_stats  (datecapture, wait_type,	wait_time_s, Pct)
+insert into DBALogging.dbo.sys_dm_os_wait_stats  (datecapture, wait_type,	wait_time_s, Pct)
 select top 100
 	datecapture =	SYSDATETIMEOFFSET()
 ,	wait_type
@@ -152,7 +152,7 @@ select
 ,	datecapture
 ,	wait_time_s 
 ,	Pct			=	100. * wait_time_s / sum(wait_time_s) OVER (partition by datecapture)
-from  dbaadmin.dbo.sys_dm_os_wait_stats wt
+from  DBALogging.dbo.sys_dm_os_wait_stats wt
 where wt.wait_type NOT LIKE '%SLEEP%' 
 and wt.wait_type <> 'REQUEST_FOR_DEADLOCK_SEARCH'
 and wt.wait_type not in ('CLR_AUTO_EVENT','CLR_MANUAL_EVENT','DIRTY_PAGE_POLL')
@@ -170,7 +170,7 @@ select distinct
 ,	wait_time_s =	sum(wait_time_s) OVER (partition by wait_Type, convert(date, datecapture))
 ,	Pct			=	convert(decimal(9,2), round(100.00 * sum(wait_time_s) OVER (partition by wait_Type, convert(date, datecapture))
 				/ sum(wait_time_s) OVER (partition by convert(date, datecapture)), 2))
-from  dbaadmin.dbo.sys_dm_os_wait_stats wt
+from  DBALogging.dbo.sys_dm_os_wait_stats wt
 where wt.wait_type NOT LIKE '%SLEEP%' 
 and wt.wait_type <> 'REQUEST_FOR_DEADLOCK_SEARCH'
 and wt.wait_type not in ('CLR_AUTO_EVENT','CLR_MANUAL_EVENT','DIRTY_PAGE_POLL')
@@ -189,7 +189,7 @@ select distinct
 ,	wait_time_s =	sum(wait_time_s) OVER (partition by wait_Type, convert(char(4),datepart(yyyy,datecapture))+'-'+right('0'+(convert(varchar(2),datepart(m, datecapture))),2))
 ,	Pct			=	100. * sum(wait_time_s) OVER (partition by wait_Type, convert(char(4),datepart(yyyy,datecapture))+'-'+right('0'+(convert(varchar(2),datepart(m, datecapture))),2))
 				/ sum(wait_time_s) OVER (partition by convert(char(4),datepart(yyyy,datecapture))+'-'+right('0'+(convert(varchar(2),datepart(m, datecapture))),2))
-from  dbaadmin.dbo.sys_dm_os_wait_stats wt
+from  DBALogging.dbo.sys_dm_os_wait_stats wt
 where wt.wait_type NOT LIKE '%SLEEP%' 
 and wt.wait_type <> 'REQUEST_FOR_DEADLOCK_SEARCH'
 and wt.wait_type not in ('CLR_AUTO_EVENT','CLR_MANUAL_EVENT','DIRTY_PAGE_POLL')
@@ -205,7 +205,7 @@ select distinct
 	wait_type
 ,	wait_time_s = sum(wait_time_s) over (partition by wait_type) 
 ,	Pct			=	100. * sum(wait_time_s) over (partition by wait_type) / sum(wait_time_s) OVER ()
-from  dbaadmin.dbo.sys_dm_os_wait_stats wt
+from  DBALogging.dbo.sys_dm_os_wait_stats wt
 where wt.wait_type NOT LIKE '%SLEEP%' 
 and wt.wait_type <> 'REQUEST_FOR_DEADLOCK_SEARCH'
 and wt.wait_type not in ('CLR_AUTO_EVENT','CLR_MANUAL_EVENT','DIRTY_PAGE_POLL')
