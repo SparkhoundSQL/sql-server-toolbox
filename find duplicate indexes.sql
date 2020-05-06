@@ -1,3 +1,4 @@
+--TODO Set current database context to desired database.
 --Find duplicate indexes based on keysets and properties
 
 SELECT TableName, IndexName1, IndexName2
@@ -49,14 +50,14 @@ FROM (
 					from sys.index_columns ic
 					inner join sys.indexes si on si.index_id = ic.index_id and si.object_id = ic.object_id 
 					inner join sys.columns c on ic.object_id = c.object_id and ic.column_id = c.column_id 
-					where ic.index_id = i1.index_id and ic.object_id = o.object_id and si.index_id > 1
+					where ic.index_id = i1.index_id and ic.object_id = o.object_id--and si.index_id > 1
 					FOR XML AUTO)
 					= 
 					(select tablename = object_name(ic.object_id), columnname = c.name, si.type_desc, is_descending_key = ic.is_descending_key, is_included_column = ic.is_included_column, is_primary_key = si.is_primary_key, is_unique = si.is_unique, has_filter = si.has_filter, filter_definition  = isnull(filter_definition,'')
 					from sys.index_columns ic
 					inner join sys.indexes si on si.index_id = ic.index_id and si.object_id = ic.object_id 
 					inner join sys.columns c on ic.object_id = c.object_id and ic.column_id = c.column_id 
-					where ic.index_id = i2.index_id and ic.object_id = o.object_id and si.index_id > 1
+					where ic.index_id = i2.index_id and ic.object_id = o.object_id-- and si.index_id > 1
 					FOR XML AUTO)
 				)
 			)
@@ -65,6 +66,24 @@ FROM (
 
 ORDER BY TableName, IndexName1, IndexName2
 
+/*
+select tablename = o.name, i.index_id, indexname = i.name, columnname = c.name, ic.index_column_id from sys.indexes i
+inner join sys.index_columns ic
+on i.index_id = ic.index_id and ic.object_id = i.object_id
+inner join sys.columns c
+on c.object_id = i.object_id and ic.column_id = c.column_id
+inner join sys.objects o on o.object_id = i.object_id and is_ms_shipped = 0 
+where i.object_id in (select i.object_id  from sys.indexes i
+						inner join sys.index_columns ic
+						on i.index_id = ic.index_id   and ic.object_id = i.object_id
+						inner join sys.columns c
+						on c.object_id = i.object_id and ic.column_id = c.column_id
+						where c.name = 'id'   
+						group by i.object_id 
+						having count(distinct i.index_id) > 1
+)
+order by i.object_id
+*/
 
 /*
 
