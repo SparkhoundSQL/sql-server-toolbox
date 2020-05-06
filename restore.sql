@@ -42,7 +42,24 @@ GO
 ALTER DATABASE [WideWorldImporters] SET COMPATIBILITY_LEVEL = 150
 GO
 
-
+--Azure VM
+Example: Restore WWI sample DB
+USE [master]
+--https://github.com/Microsoft/sql-server-samples/tree/master/samples/databases/wide-world-importers
+ALTER DATABASE [WideWorldImporters] SET SINGLE_USER WITH ROLLBACK IMMEDIATE
+GO
+RESTORE DATABASE [WideWorldImporters] 
+FROM  DISK = N'C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\Backup\WideWorldImporters-Full.bak' 
+WITH  FILE = 1
+,  MOVE N'WWI_Primary' TO N'f:\DATA\WideWorldImporters.mdf'
+,  MOVE N'WWI_UserData' TO N'f:\DAta\WideWorldImporters_UserData.ndf'
+,  MOVE N'WWI_Log' TO N'f:\Data\WideWorldImporters.ldf'
+,  MOVE N'WWI_InMemory_Data_1' TO N'f:\DATA\WideWorldImporters_InMemory_Data_1',  NOUNLOAD,  STATS = 5
+GO
+ALTER DATABASE [WideWorldImporters] SET MULTI_USER
+GO
+ALTER DATABASE [WideWorldImporters] SET COMPATIBILITY_LEVEL = 150
+GO
 
 
 */
