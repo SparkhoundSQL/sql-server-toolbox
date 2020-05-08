@@ -7,7 +7,7 @@ GO
 
 CREATE PROCEDURE [dbo].[BackupFailureNotification] 
 as
--- Version# March 2020 Rev02
+-- Version# May 2020 Rev01
 --	  @database_name nvarchar(512)
 --	, @backuptype nvarchar(50)
 --	, @recovery_model_desc nvarchar(50)
@@ -149,6 +149,9 @@ BEGIN
 		N'</table>' ;  
 	
 	BEGIN
+	
+	SET @tablelog = '<h4><p>Local server time ' + convert(varchar(50), SYSDATETIMEOFFSET()) + '</p></h4>
+		' + @tablelog 
 	declare @nBody nvarchar(max)
 	declare @nServer nvarchar(max)
 	SET @nBody = CASE 
