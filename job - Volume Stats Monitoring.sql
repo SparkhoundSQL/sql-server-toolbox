@@ -1,8 +1,10 @@
+--CHECK TODO's
+--This version is for non-production systems. See other script aptly named for production systems.
 -- Create Table
-USE [DBALogging]
+USE [DBALogging] --TODO
 GO
 
-
+IF NOT EXISTS (SELECT * FROM sys.objects where name = 'VolumeStats' and type_desc = 'USER_TABLE')
 CREATE TABLE [dbo].[VolumeStats](
 	[ID] int IDENTITY(1,1) NOT NULL,
 	[DiskDrive] nvarchar (512) NULL,
@@ -21,12 +23,11 @@ CREATE TABLE [dbo].[VolumeStats](
 GO
 
 --Create Sproc
-
 CREATE PROCEDURE [dbo].[Get_VolumeStats]
-@Threshold decimal(9,2)
+@Threshold decimal(19,2)
 AS
-BEGIN
---Changed all floats and decimal(18,2) to decimal(19,2) - WDA 20170312
+BEGIN 
+-- Version# May 2020 Rev01
 DECLARE @VolumeStats TABLE
 (ID int not null identity(1,1),
 volume_mount_point nvarchar(512),
@@ -63,21 +64,16 @@ FETCH NEXT FROM VolumeInfo INTO @volume,@file_system_type,@logical_name,@TotalSi
 WHILE (@@FETCH_STATUS <> -1)
 BEGIN
 
---if @percent > 20 -- changed 20170312 WDA
-if @percent <= @Threshold --If free space % is less than 20% --- changed by to @Threshold parameter which is passed via the Agent Job.  This way you don't have to change the Sproc just the job
+if @percent <= @Threshold
 BEGIN
-    INSERT INTO dbo.VolumeStats(
-DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed
-)
+    INSERT INTO dbo.VolumeStats(DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed)
     values(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
     insert into @VolumeStats (volume_mount_point,file_system_type,logical_volume_name,Total_Size,Available_Size,Space_Free,DateTimePerformed)
     VALUES(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
 END
 else
 BEGIN
-    INSERT INTO dbo.VolumeStats(
-DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed
-)
+    INSERT INTO dbo.VolumeStats(DiskDrive,FileSystemType, LogicalVolumeName,DriveSize,DriveFreeSpace,DrivePercentFree,DateTimePerformed)
     values(@volume,@file_system_type,@logical_name,@TotalSize,@AvailableSize,@percent,@TimeStamp)
 
 END
@@ -87,10 +83,8 @@ END
 CLOSE VolumeInfo
 DEALLOCATE VolumeInfo
 
-if (SELECT COUNT(*) FROM @VolumeStats 
-where logical_volume_name <> 'TempDBdata' --added to ignore the tempdb drive - 20170311 WDA 
-) > 0
-BEGIN --added BEGIN/END wrap on IF - WDA 20170312 
+if (SELECT COUNT(*) FROM @VolumeStats where logical_volume_name <> 'TempDBdata' ) > 0
+BEGIN  
 	DECLARE @tableHTML  NVARCHAR(MAX) ;  
   
 	SET @tableHTML =  
@@ -114,9 +108,11 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 		N'</table>' ;  
   
 	BEGIN
-	if @percent < @Threshold -- removed WDA 20170418
+	if @percent > 1
+	 AND @percent < @Threshold 
 	BEGIN
 		EXEC msdb.dbo.sp_send_dbmail  
+		   @profile_name = 'whatever', --TODO
 		   @recipients = 'sql.alerts@sparkhound.com',  
 		   @body = @tableHTML, 
 		   @importance = 'HIGH', 
@@ -128,6 +124,15 @@ BEGIN --added BEGIN/END wrap on IF - WDA 20170312
 END;
 
 GO
+
+
+declare @startup_job_id uniqueidentifier
+select @startup_job_id = job_id from  msdb.dbo.sysjobs where name = 'Volume Stats Monitoring'
+
+IF @startup_job_id is not null
+EXEC msdb.dbo.sp_delete_job @job_id=@startup_job_id, @delete_unused_schedule=1
+GO
+
 
 
 --Create SQL Agent Job
@@ -157,8 +162,8 @@ EXEC msdb.dbo.sp_add_jobstep @job_name=N'Volume Stats Monitoring', @step_name=N'
 		@retry_attempts=0, 
 		@retry_interval=0, 
 		@os_run_priority=0, @subsystem=N'TSQL', 
-		@command=N'exec dbo.Get_VolumeStats @Threshold = 14;', 
-		@database_name=N'DBALogging', --make sure db name matches
+		@command=N'exec dbo.Get_VolumeStats @Threshold = 14;', --Default threshold of 14, change if desired in the job step
+		@database_name=N'DBALogging', --TODO: make sure db name matches
 		@flags=0
 GO
 USE [msdb]
@@ -174,7 +179,7 @@ EXEC msdb.dbo.sp_update_job @job_name=N'Volume Stats Monitoring',
 		@description=N'', 
 		@category_name=N'[Uncategorized (Local)]', 
 		@owner_login_name=N'sa', 
-		@notify_email_operator_name=N'', --enter operator name
+		@notify_email_operator_name=N'', --TODO: enter operator name
 		@notify_netsend_operator_name=N'', 
 		@notify_page_operator_name=N''
 GO

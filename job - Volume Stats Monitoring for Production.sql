@@ -1,4 +1,5 @@
 --CHECK TODO's
+--This version is for production systems. See other script aptly named for non-production systems.
 
 -- Create Table
 USE [DBALogging] --TODO
@@ -27,6 +28,7 @@ CREATE PROCEDURE [dbo].[Get_VolumeStats]
 @Threshold decimal(19,2) 
 AS
 BEGIN
+-- Version# May 2020 Rev01
 DECLARE @VolumeStats TABLE
 (ID int not null identity(1,1),
 volume_mount_point nvarchar(512),
