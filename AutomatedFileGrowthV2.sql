@@ -41,7 +41,16 @@ SELECT
  CROSS APPLY sys.databases d
  WHERE d.database_id = DB_ID()
  AND d.is_read_only = 0
- AND df.size > 0) x;
+ AND df.size > 0
+  AND ( d.Replica_id is null  or Exists (
+SELECT @@SERVERNAME, *
+   FROM sys.dm_hadr_availability_replica_states  rs
+   inner join sys.availability_databases_cluster dc
+   on rs.group_id = dc.group_id
+   WHERE is_local = 1
+   and role_desc = ''PRIMARY''
+   and dc.database_name = d.name))
+ ) x;
 '
 
 Delete from @TempTable where FreePercent > @Threshold 
@@ -54,11 +63,11 @@ Set @FileMax = (Select Max(ID) from @TempTable)
 Print @FileCounter
 PRINT @FileMax
 
+Select * from @TempTable
+
 while @FileCounter < @FileMax
 begin
 	Set @GrowFileTxt = (Select growTSQL from @TempTable where ID = @FileCounter)
     Exec (@GrowFileTxt)
     set @FileCounter = @FileCounter +1
 end
-
-
