@@ -63,8 +63,6 @@ Set @FileMax = (Select Max(ID) from @TempTable)
 Print @FileCounter
 PRINT @FileMax
 
-Select * from @TempTable
-
 while @FileCounter < @FileMax
 begin
 	Set @GrowFileTxt = (Select growTSQL from @TempTable where ID = @FileCounter)
