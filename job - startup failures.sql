@@ -154,6 +154,8 @@ and LogMessageText not like ''Error: 7886, Severity: 20%''
 and LogMessageText not like ''%Windows return code: 0x2098, state: 15%''
 and LogMessageText not like ''The SQL Server Network Interface library could not register the Service Principal Name (SPN)%''
 
+and LogMessageText not like ''Machine supports memory error recovery. SQL memory protection is enabled to recover from memory corruption.''
+
 )
 order by LogDate
 
