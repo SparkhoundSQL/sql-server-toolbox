@@ -1,9 +1,19 @@
 --This is simple use of the ring_buffer for historical CPU, goes back a little over 4 hours.
 -- for more CPU and Memory, look at toolbox/sys_dm_os_ring_buffers.sql
 
+use TempDB;
+GO
+
+SELECT * from 
+(SELECT 'InstanceName' = @@SERVERNAME 
+, logical_cpu_count = cpu_count, hyperthread_ratio , physical_cpu_count = cpu_count/hyperthread_ratio FROM sys.dm_os_sys_info ) as os
+--this below line SQL 2016 SP1+, 2012 SP4+
+cross apply (select numa_node_count,	socket_count,	cores_per_socket FROM sys.dm_os_sys_info ) as si 
+
 select
 	Avg_SystemIdle_Pct				=	AVG( record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') )
 ,	Avg_SQLProcessUtilization_Pct	=	AVG( record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') )
+,	Max_SQLProcessUtilization_Pct	=	MAX( record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') )
       from (
             select timestamp, convert(xml, record) as record
             from sys.dm_os_ring_buffers
@@ -33,4 +43,4 @@ from (
 order by record_id desc
 
 
---http://sqlblog.com/blogs/ben_nevarez/archive/2009/07/26/getting-cpu-utilization-data-from-sql-server.aspx
+--Inspired by: http://sqlblog.com/blogs/ben_nevarez/archive/2009/07/26/getting-cpu-utilization-data-from-sql-server.aspx
