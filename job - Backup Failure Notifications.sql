@@ -246,3 +246,49 @@ EndSave:
 GO
 
 
+/*
+
+DROP INDEX [backupsetDate] ON [dbo].[backupset]
+--replace
+GO
+CREATE NONCLUSTERED INDEX [IDX_NC_backupset_backup_finish_date_database_name] ON [dbo].[backupset]
+(
+	[backup_finish_date] ASC,
+	[database_name] ASC
+)
+INCLUDE([media_set_id],[backup_start_date],[type]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+
+CREATE NONCLUSTERED INDEX [backupsetuuid] ON [dbo].[backupset]
+(
+	[backup_set_uuid] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+
+
+CREATE NONCLUSTERED INDEX [IDX_NC_backupset_last_lsn_database_name] ON [dbo].[backupset]
+(
+	[last_lsn] ASC,
+	[database_name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+
+CREATE NONCLUSTERED INDEX [IDX_NC_backupset_name_type_database_name] ON [dbo].[backupset]
+(
+	[name] ASC,
+	[type] ASC,
+	[database_name] ASC
+)
+INCLUDE([backup_set_id],[server_name]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+
+CREATE NONCLUSTERED INDEX [IDX_NC_backupset_type_database_name_last_lsn] ON [dbo].[backupset]
+(
+	[type] ASC,
+	[database_name] ASC,
+	[last_lsn] ASC
+)
+INCLUDE([time_zone],[backup_finish_date],[server_name]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+GO
+
+*/
