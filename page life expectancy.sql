@@ -1,51 +1,32 @@
-use TempDB
-
+use TempDB;
+GO
 select 
-	p.InstanceName
-,	c.Version 
-,	'LogicalCPUCount'		= os.cpu_count
-,	OS_Physical_Mem_MB = os.[Server Physical Mem (MB)] -- SQL2012+ only
-,	Min_Server_Mem_MB = c.[Min_Server_Mem_MB]
-,	Max_Server_Mem_MB = c.[Max_Server_Mem_MB] --2147483647 means unlimited, just like it shows in SSMS
+	[InstanceName]		= @@SERVERNAME
+,	[SQL_Version]		= @@VERSION
+,	si.*
+,	i.[Min_Server_Mem_MB]
+,	i.[Max_Server_Mem_MB] --2147483647 means unlimited, just like it shows in SSMS
 ,	p.PLE_s --300s is only an arbitrary rule for smaller memory servers (<16gb), for larger, it should be baselined and measured.
-,	'Churn (MB/s)'			=	cast((p.Total_Server_Mem_GB)/1024./NULLIF(p.PLE_s,0) as decimal(19,2))
+,	'Churn (MB/s)'			=	cast((si.Total_Server_Memory_GB*1024.)/NULLIF(p.PLE_s,0) as decimal(19,2))
 ,	OS_Available_physical_mem_GB = (SELECT cast(available_physical_memory_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_sys_memory) 
 ,	SQL_Physical_memory_in_use_GB = (SELECT cast(physical_memory_in_use_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_process_memory)
-,	p.Total_Server_Mem_GB --May be more or less than memory_in_use 
-,	p.Target_Server_Mem_GB	
-,	Target_vs_Total = CASE WHEN p.Total_Server_Mem_GB < p.Target_Server_Mem_GB	 
+,	Target_vs_Total = CASE  WHEN si.Total_Server_Memory_GB < si.Target_Server_Memory_GB
 							THEN 'Target >= Total. SQL wants more memory than it has, or is building up to that point.'
 							ELSE 'Total >= Target. SQL has enough memory to do what it wants.' END
-,	si.LPIM -- Works on SQL 2016 SP1, 2012 SP4+
-from(
-select 
-	InstanceName = @@SERVERNAME 
-,	Target_Server_Mem_GB =	max(case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end)
-,	Total_Server_Mem_GB	=	max(case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end) 
-,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
---select * 
-from sys.dm_os_performance_counters
---This only looks at one NUMA node. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
-)  as p
-inner join (select 'InstanceName' = @@SERVERNAME, Version = @@VERSION, 
-			Min_Server_Mem_MB  = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end) ,
-			Max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
-			from sys.configurations) as c on p.InstanceName = c.InstanceName
-inner join (SELECT 'InstanceName' = @@SERVERNAME 
-			, cpu_count , hyperthread_ratio AS 'HyperthreadRatio',
-			cpu_count/hyperthread_ratio AS 'PhysicalCPUCount'
-			, 'Server Physical Mem (MB)' = cast(physical_memory_kb/1024. as decimal(19,2))   -- SQL2012+ only
-			FROM sys.dm_os_sys_info ) as os
-on c.InstanceName=os.InstanceName
+FROM 		(SELECT 	InstanceName = @@SERVERNAME  
+					,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
+			FROM sys.dm_os_performance_counters --This only looks at one NUMA node. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
+			)  as p
+cross apply (SELECT		Min_Server_Mem_MB  = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end)
+					,	Max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
+			FROM sys.configurations
+			) as i
+cross apply (SELECT		sqlserver_start_time
+					,	OS_Physical_Mem_MB = convert(bigint, physical_memory_kb /1024.)
+					, 	Total_Server_Memory_GB = convert(decimal(19,3), committed_kb / 1024. / 1024.)
+					,	Target_Server_Memory_GB = convert(decimal(19,3), committed_target_kb / 1024. / 1024.)
+			FROM sys.dm_os_sys_info 
+			) as si;
 
-
--- Works on SQL 2016 SP1, 2012 SP4+
-cross apply (select LPIM = CASE sql_memory_model_Desc 
-					WHEN  'Conventional' THEN 'Lock Pages in Memory privilege is not granted'
-					WHEN 'LOCK_PAGES' THEN 'Lock Pages in Memory privilege is granted'
-					WHEN 'LARGE_PAGES' THEN 'Lock Pages in Memory privilege is granted in Enterprise mode with Trace Flag 834 ON'
-					END from sys.dm_os_sys_info 
-				) as si
-
---adapted from http://www.datavail.com/category-blog/max-server-memory-300-second-rule/
-
+--For LPIM check toolbox\lock Pages in Memory LPIM.sql
+--For CPU infor check toolbox\cpu utilization.sql
