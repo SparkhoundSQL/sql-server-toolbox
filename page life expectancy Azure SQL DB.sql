@@ -6,7 +6,7 @@ select
 ,	Min_Server_Mem_MB = c.[Min_Server_Mem_MB]
 ,	Max_Server_Mem_MB = c.[Max_Server_Mem_MB] --2147483647 means unlimited, just like it shows in SSMS
 ,	p.PLE_s --300s is only an arbitrary rule for smaller memory servers (<16gb), for larger, it should be baselined and measured.
-,	'Churn (MB/s)'			=	cast((p.Total_Server_Mem_GB)/1024./NULLIF(p.PLE_s,0) as decimal(19,2))
+,	'Churn (MB/s)'			=	cast((p.Total_Server_Mem_GB*1024.)/NULLIF(p.PLE_s,0) as decimal(19,2))
 ,	p.Total_Server_Mem_GB --May be more or less than memory_in_use 
 ,	p.Target_Server_Mem_GB	
 ,	Target_vs_Total = CASE WHEN p.Total_Server_Mem_GB < p.Target_Server_Mem_GB	 
