@@ -26,6 +26,9 @@ FROM sys.database_query_store_options;
 USE WhateverDB
 --Unfortunately clearing the Query Store is necessary.
 ALTER DATABASE [WhateverDB] SET QUERY_STORE CLEAR;
+--Disable the query store
+ALTER DATABASE [WhateverDB] SET QUERY_STORE = OFF;
+
 
 exec dbo.sp_query_store_consistency_check;
 
