@@ -5,7 +5,7 @@ use tempdb
 go
 select SYSDATETIMEOFFSET()
 declare @oldestdate as date, @now as datetime2(0)
-select @oldestdate = dateadd(month,-3, sysdatetime()), @now = sysdatetime() --Filter the time frame of the logs.
+select @oldestdate = dateadd(week,-5, sysdatetime()), @now = sysdatetime() --Filter the time frame of the logs.
 
 select 'Getting errors since ' + cast(@oldestdate as varchar(30))
 
