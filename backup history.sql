@@ -101,7 +101,7 @@ order by backuptype, RecoveryModel, BackupDate asc
  */
  
 --granular backup history
-SELECT 
+SELECT TOP 1000
 		bs.database_name
 	, backuptype = CASE 
 							WHEN bs.type = 'D' and bs.is_copy_only = 0 then 'Full Database'
@@ -124,7 +124,8 @@ SELECT
 	FROM msdb.dbo.backupset bs	
 	LEFT OUTER JOIN msdb.dbo.[backupmediafamily] bf
 	on bs.[media_set_id] = bf.[media_set_id]
-	--where database_name = 'w'
+	WHERE bs.backup_start_date > dateadd(mo, -1, getdate()) --only look at last month
+	--and database_name = 'w' --optionally filter by database
 	ORDER BY  bs.database_name asc, bs.Backup_Start_Date desc;
  
 
