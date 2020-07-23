@@ -10,6 +10,7 @@ select
 ,	'Churn (MB/s)'			=	cast((si.Total_Server_Memory_GB*1024.)/NULLIF(p.PLE_s,0) as decimal(19,2))
 ,	OS_Available_physical_mem_GB = (SELECT cast(available_physical_memory_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_sys_memory) 
 ,	SQL_Physical_memory_in_use_GB = (SELECT cast(physical_memory_in_use_kb / 1024. / 1024. as decimal(19,2)) from sys.dm_os_process_memory)
+,	si.Total_Server_Memory_GB , si.Target_Server_Memory_GB
 ,	Target_vs_Total = CASE  WHEN si.Total_Server_Memory_GB < si.Target_Server_Memory_GB
 							THEN 'Target >= Total. SQL wants more memory than it has, or is building up to that point.'
 							ELSE 'Total >= Target. SQL has enough memory to do what it wants.' END
