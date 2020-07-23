@@ -124,7 +124,7 @@ SELECT TOP 1000
 	FROM msdb.dbo.backupset bs	
 	LEFT OUTER JOIN msdb.dbo.[backupmediafamily] bf
 	on bs.[media_set_id] = bf.[media_set_id]
-	WHERE bs.backup_start_date > dateadd(mo, -1, getdate()) --only look at last month
+	WHERE bs.backup_start_date > dateadd(month, -1, getdate()) --only look at last month
 	--and database_name = 'w' --optionally filter by database
 	ORDER BY  bs.database_name asc, bs.Backup_Start_Date desc;
  
