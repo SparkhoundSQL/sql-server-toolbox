@@ -7,7 +7,7 @@ GO
 
 CREATE PROCEDURE [dbo].[BackupFailureNotification] 
 as
--- Version# May 2020 Rev01
+-- Version# July 2020 Rev01
 --	  @database_name nvarchar(512)
 --	, @backuptype nvarchar(50)
 --	, @recovery_model_desc nvarchar(50)
@@ -34,6 +34,49 @@ IF OBJECT_ID('tempdb..#BackupFailureFULL') IS NOT NULL
     BEGIN
 	   DROP TABLE #BackupFailureFULL;
     END;
+
+IF OBJECT_ID('tempdb..#RecentFailover') IS NOT NULL
+    BEGIN
+	   DROP TABLE #RecentFailover;
+    END;
+
+DECLARE @FileName NVARCHAR(4000)
+SELECT @FileName = target_data.value('(EventFileTarget/File/@name)[1]', 'nvarchar(4000)')
+    FROM (
+           SELECT CAST(target_data AS XML) target_data
+            FROM sys.dm_xe_sessions s
+            JOIN sys.dm_xe_session_targets t
+                ON s.address = t.event_session_address
+            WHERE s.name = N'AlwaysOn_health'
+         ) ft;
+
+WITH    base
+          AS (
+               SELECT XEData.value('(event/@timestamp)[1]', 'datetime2(3)') AS event_timestamp
+                   ,XEData.value('(event/data/text)[1]', 'VARCHAR(255)') AS previous_state
+                   ,XEData.value('(event/data/text)[2]', 'VARCHAR(255)') AS current_state
+				   ,XEData.value('(event/data)[3]', 'VARCHAR(255)') AS availability_group_id
+				   ,XEData.value('(event/data)[4]', 'VARCHAR(255)') AS availability_group_name
+				   ,XEData.value('(event/data)[5]', 'VARCHAR(255)') AS availability_replica_id
+				   ,XEData.value('(event/data)[6]', 'VARCHAR(255)') AS availability_replica_name
+                   ,ar.replica_server_name
+                FROM (
+                       SELECT CAST(event_data AS XML) XEData
+                           ,*
+                        FROM sys.fn_xe_file_target_read_file(@FileName, NULL, NULL, NULL)
+                        WHERE object_name = 'availability_replica_state_change'
+                     ) event_data
+                JOIN sys.availability_replicas ar
+                    ON ar.replica_id = XEData.value('(event/data/value)[5]', 'VARCHAR(255)')
+             )
+
+		SELECT availability_replica_id 
+		INTO #RecentFailover
+		FROM base 
+		Where event_timestamp > DATEADD (DAY, -1, getdate())
+		and previous_state ='SECONDARY_NORMAL'
+		and current_state = 'RESOLVING_PENDING_FAILOVER'
+        ORDER BY event_timestamp DESC;
 
 DECLARE @TimeStampFULL datetime2 = GETDATE()
 SELECT  
@@ -88,10 +131,12 @@ into #BackupFailureFULL
  ) a
  on db_name(d.database_id) = a.database_name
  WHERE a.database_name not in ('tempdb', 'model') 
+ and a.database_name not in (Select name From sys.databases where replica_id in (select availability_replica_id from #RecentFailover))
  and d.state_desc ='ONLINE' 
  AND (		(backuptype <> 'Transaction Log' and d.recovery_model_desc = 'SIMPLE')
 		OR	(d.recovery_model_desc <> 'SIMPLE')
 	)
+ and (d.create_date > ( DATEADD(DAY, 1, GETDATE()))) --TODO: change DATEADD value based on client's full backup interval
  and  (d.replica_id IS Null --not in an Ag
 		or
 			--Select for AG databases that are prefered replicas that fit the criteria for a gap in backup history
@@ -247,7 +292,6 @@ GO
 
 
 /*
-
 DROP INDEX [backupsetDate] ON [dbo].[backupset]
 --replace
 GO
@@ -258,21 +302,17 @@ CREATE NONCLUSTERED INDEX [IDX_NC_backupset_backup_finish_date_database_name] ON
 )
 INCLUDE([media_set_id],[backup_start_date],[type]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 GO
-
 CREATE NONCLUSTERED INDEX [backupsetuuid] ON [dbo].[backupset]
 (
 	[backup_set_uuid] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 GO
-
-
 CREATE NONCLUSTERED INDEX [IDX_NC_backupset_last_lsn_database_name] ON [dbo].[backupset]
 (
 	[last_lsn] ASC,
 	[database_name] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 GO
-
 CREATE NONCLUSTERED INDEX [IDX_NC_backupset_name_type_database_name] ON [dbo].[backupset]
 (
 	[name] ASC,
@@ -281,7 +321,6 @@ CREATE NONCLUSTERED INDEX [IDX_NC_backupset_name_type_database_name] ON [dbo].[b
 )
 INCLUDE([backup_set_id],[server_name]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 GO
-
 CREATE NONCLUSTERED INDEX [IDX_NC_backupset_type_database_name_last_lsn] ON [dbo].[backupset]
 (
 	[type] ASC,
@@ -290,5 +329,4 @@ CREATE NONCLUSTERED INDEX [IDX_NC_backupset_type_database_name_last_lsn] ON [dbo
 )
 INCLUDE([time_zone],[backup_finish_date],[server_name]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 GO
-
 */
