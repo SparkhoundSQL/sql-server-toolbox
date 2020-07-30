@@ -3,7 +3,7 @@
 SELECT d.name
 , d.state_desc
 --, encryption_state_desc --SQL 2019+ only
-, encryption_state = CASE dek.encryption_state WHEN 0 THEN 'No database encryption key present, no encryption'
+, encryption_state_desc = CASE dek.encryption_state WHEN 0 THEN 'No database encryption key present, no encryption'
 							WHEN 1 THEN 'Unencrypted'
 							WHEN 2 THEN 'Encryption in progress'
 							WHEN 3 THEN 'Encrypted'
