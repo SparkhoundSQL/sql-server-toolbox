@@ -1,8 +1,12 @@
 --TODO Set current database context to desired database.
 
 --Execute this version of the script for the current desired database context only.
---Look below for an all-databases version that cannot build the CREATE statement.
+--Look below for an all-databases version, but it cannot build the CREATE statement.
 --Demo lab script to generate a missing index suggestion: toolbox\lab - missing index setup demo.sql
+
+--Cleared when SQL Server restarts. This DMV returns the service start time for both SQL Server and Azure SQL DB.
+select sqlserver_start_time from sys.dm_os_sys_info;
+GO
 
 SELECT 
 	mid.statement 
@@ -54,11 +58,6 @@ and mid.database_id = db_id()
 --and		t.name like '%pt_time_salesorder_ids%'
 --order by avg_user_impact * avg_total_user_cost desc;
 order by create_index_statement;
-
-
-SELECT servicename, status_desc, last_startup_time FROM sys.dm_server_services;
-GO
-
 
 /*
 

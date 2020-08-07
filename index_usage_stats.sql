@@ -1,6 +1,10 @@
 --Discover indexes that aren't helping reads but still hurting writes
 --Does not show tables that have never been written to
 
+--Cleared when SQL Server restarts. This DMV returns the service start time for both SQL Server and Azure SQL DB.
+SELECT sqlserver_start_time FROM sys.dm_os_sys_info;
+GO
+
 SELECT  DatabaseName		= d.name
 	,	s.object_id
 	,	TableName 			= ' [' + sc.name + '].[' + o.name + ']'
@@ -55,6 +59,4 @@ and is_unique_constraint = 0
 
 order by user_seeks + user_scans + user_lookups  asc,  s.user_updates desc; --most useless indexes show up first
 
-
-SELECT servicename, status_desc, last_startup_time FROM sys.dm_server_services;
 GO
