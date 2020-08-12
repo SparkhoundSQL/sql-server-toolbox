@@ -9,6 +9,7 @@
 --		The password must be the current password for the database key. 
 --		If the password is not known, you must regenerate the password and immediately re-backup the key. Note this will force all encyrypted data to be unencrypted and re-encrypted. It is transparent but could be time-consuming.
 --		https://docs.microsoft.com/sql/t-sql/statements/alter-master-key-transact-sql follow directions to REGENERATE key with new password.
+-- See also: toolbox\backup service master key.sql
 
 exec sp_msforeachdb 'use [?];
 if exists(select * from sys.symmetric_keys )
@@ -16,10 +17,13 @@ begin
 select ''Database key(s) found in [?]''
 select ''USE [?];''
 select ''OPEN MASTER KEY DECRYPTION BY PASSWORD = ''''passwordhere'''';   
-BACKUP MASTER KEY TO FILE = ''''c:\temp\?_''+name+''_20200131.key''''
+BACKUP MASTER KEY TO FILE = ''''c:\temp\?_''+name+''_20200131.snk''''
     ENCRYPTION BY PASSWORD = ''''passwordhere'''';
 GO  ''
 from sys.symmetric_keys;
 END';
 
 --exec sp_msforeachdb 'use [?]; select ''[?]'',* from sys.symmetric_keys';
+
+--THEN:
+--Move the file to enterprise security vault, along with its password, associated with the SQL instance. 

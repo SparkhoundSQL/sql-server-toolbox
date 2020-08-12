@@ -37,8 +37,8 @@ WITH SUBJECT = 'Testing TDE Cert'
 , EXPIRY_DATE = '3/14/2071'; --Future Date
 --SELECT * FROM sys.certificates where name = 'TDECert_enctest_2012'
 GO
-BACKUP SERVICE MASTER KEY --not actually important for TDE, but important overall and should be backed up regardless.
-TO FILE = 'E:\Program Files\Microsoft SQL Server\MSSQL14.SQL2K17\MSSQL\data\SQLServiceMasterKey_20120314.smk' 
+BACKUP SERVICE MASTER KEY --not actually important for TDE, but important overall and should be backed up regardless. See also: toolbox\backup service master key.sql
+TO FILE = 'E:\Program Files\Microsoft SQL Server\MSSQL14.SQL2K17\MSSQL\data\SQLServiceMasterKey_20120314.snk' 
     ENCRYPTION BY PASSWORD = '$1234testpassword'
 
 BACKUP MASTER KEY --each instance can have its own master key.
