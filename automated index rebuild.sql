@@ -1,27 +1,29 @@
 /* 
 Automated index maint script
+Last Update: 20200801
 
 Primary objective is to never perform an offline index rebuild unless it is the only option, and desired. This is commented out by default.
 Loops past errors, throws an error at the end if any errors were recorded.
 
-IMPORTANT: When scheduling in a SQL Agent job, with each database as a job step, set each job step to go to the next step on failure.
+IMPORTANT: When scheduling in a SQL Agent job, with each database as a job step, set each job step to "go to the next step" on failure.
 
 #TODO 
-1. Check the name of the DBALogging/DBAAdmin/DBAHound database local to this SQL instance and replace.
+1. Check the name of the DBALogging/DBAAdmin/DBAHound database local to this SQL instance and replace if necessary.
 2. Change @StartWindow and @EndWindow values as desired.
 3. Set the job step database context correctly - this script doesn't have a USE. For example, in the database property of the SQL Agent job step.
-4. If upgrading this script, look at the bottom - we changed the timestamp field data types to datetimeoffset and we need to update the logging table. Note recent data type changes to the IndexMaintLog table, if it already exists. See comment block at bottom, including a conversion from old datetime to datetimeoffset data.
-5. IMPORTANT! Change @TestMode variable to 0 when ready for production
+4. If upgrading this script, look at the bottom to see if the Logging table needs data type changes. We changed the timestamp field data types to datetimeoffset a couple years ago and may need to update the logging table. 
+	Note recent data type changes to the IndexMaintLog table, if it already exists. See comment block at bottom, including a conversion from old datetime to datetimeoffset data.
+5. IMPORTANT! Change @TestMode to 0 when ready for production
 
 #Optional TODO's
-Change name in ALTER ... BULK_LOGGED below if desired to use this. Change name in ALTER ... FULL near end if desired to use this. Commented out by default because this isn't feasible in many situations. 
-Enable @CompressWhenPossible to start enabling data_compression = PAGE everywhere. Not recommended without testing.
+1. Change name in ALTER ... BULK_LOGGED below if desired to use this. Change name in ALTER ... FULL near end if desired to use this. Commented out by default because this isn't feasible in many situations. 
+2. Enable @CompressWhenPossible to start enabling data_compression = PAGE everywhere. Not recommended without testing.
 */
 
-DECLARE @TestMode		bit, @StartWindow	tinyint, @EndWindow		tinyint, @CompressWhenPossible  bit 
+DECLARE @TestMode		bit, @StartWindow	tinyint, @EndWindow		tinyint, @CompressWhenPossible  bit;
 SELECT @TestMode	 =	0	-- TODO: flip to 1 to run out of cycle, without actually executing any code.
-SELECT @StartWindow	 =	1	-- 1AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
-SELECT @EndWindow	 =	5	-- 5AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
+SELECT @StartWindow	 =	1	-- TODO: 1AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
+SELECT @EndWindow	 =	24	-- TODO: 5AM Range (0-23). 24-hour of the day. Ex: 4 = 4am, 16 = 4pm. 0 = midnight.
 SELECT @CompressWhenPossible = 0 -- 0 = Don't introduce new compression on indexes. 1= Compress when possible, even currently uncompressed databases.
 
 IF @TestMode = 1 print '--Test mode is ON'
@@ -67,7 +69,7 @@ BEGIN TRY
 
        SET @ServerEdition = convert(varchar(30),(SELECT SERVERPROPERTY('Edition')))
 	   SET @ProductVersion = convert(varchar(15),(SELECT SERVERPROPERTY('ProductVersion')))
-
+   
 		-- ensure the temporary table does not exist
 		IF EXISTS (SELECT name FROM tempdb.sys.objects WHERE name like '%C__work_to_do%')
 			DROP TABLE #C__work_to_do;
@@ -82,7 +84,8 @@ BEGIN TRY
 		, Can_RebuildOnline	bit		NOT NULL
 		, Can_Compress		bit		NOT NULL
 		, indexname			sysname	NOT NULL
-		, [type_desc]		sysname NOT NULL,
+		, [type_desc]		sysname NOT NULL
+		, partitioncount	int		NOT NULL,
 
 		PRIMARY KEY (  objectid, indexid, partitionnum	)
 		)
@@ -98,6 +101,7 @@ BEGIN TRY
 		, Can_Compress
 		, indexname			
 		, [type_desc]
+		, partitioncount
 		)
 			SELECT  DISTINCT
 					objectid			=	s.object_id
@@ -107,6 +111,8 @@ BEGIN TRY
 				,	Can_Reorg			=	CASE WHEN i.type_desc like '%columnstore%' THEN 1 ELSE i.allow_page_locks END --An index cannot be reorganized when allow_page_locks is set to 0.
 				,	Can_RebuildOnline	=	
 						CASE 
+							WHEN pa.partitioncount > 1 and left(@ProductVersion,2) <= 11 --only starting with SQL2014 online partitioned index operations are supported
+								THEN 0
 							WHEN A.user_type_id is not null 
 								THEN 0 -- Cannot do ONLINE REBUILDs with certain data types in the index (key or INCLUDE).
 							WHEN i.type_desc in ('xml','spatial') THEN 0 -- Cannot do ONLINE REBUILDs for certain index types.
@@ -123,9 +129,14 @@ BEGIN TRY
 										END
 				,	indexname		=	i.name --select object_name(object_id), * 
 				,	i.[type_desc]
+				,	pa.partitioncount
 			FROM sys.indexes i 
+			inner join sys.partitions p on p.index_id = i.index_id and p.object_id = i.object_id
 			cross apply 
-			sys.dm_db_index_physical_stats (DB_ID(), i.object_id, i.index_id , NULL, 'LIMITED') s
+			sys.dm_db_index_physical_stats (DB_ID(), i.object_id, i.index_id , p.partition_number, 'LIMITED') s
+			inner join 
+			(select partitioncount = count (*), object_id, index_id from sys.partitions group by object_id, index_id) as pa
+			on  pa.object_id = i.object_id AND pa.index_id = i.index_id 			
 			left outer join 
 			(
 				select 
@@ -149,7 +160,7 @@ BEGIN TRY
 			AND i.index_id = A.index_id
 			WHERE 		
 				1=1
-			AND	s.avg_fragmentation_in_percent > 10.0 
+			AND	s.avg_fragmentation_in_percent > 20.0 
 			AND s.index_id > 0 --
 			AND s.page_count > 1280 --12800 pages is 100mb
 			and i.name is not null
@@ -161,7 +172,12 @@ BEGIN TRY
 				,	A.index_id
 				,	A.user_type_id
 				,	i.type_desc
-				,	i.name; 
+				,	i.name
+				,	pa.partitioncount; 
+
+				
+		IF @TestMode = 1
+		SELECT * FROM #C__work_to_do  ;
 		
 		IF CURSOR_STATUS('local', 'curIndexPartitions') >= 0
 		BEGIN
@@ -169,11 +185,9 @@ BEGIN TRY
 			DEALLOCATE curIndexPartitions;
 		END
 
-
 		-- Declare the cursor for the list of partitions to be processed.
 		DECLARE curIndexPartitions CURSOR LOCAL FAST_FORWARD FOR 
 		SELECT * FROM #C__work_to_do;
-
 
 		-- Open the cursor.
 		OPEN curIndexPartitions;
@@ -181,7 +195,7 @@ BEGIN TRY
 		-- Loop through the partitions.
 		FETCH NEXT
 		   FROM curIndexPartitions
-		   INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname, @type_desc;
+		   INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname, @type_desc, @partitioncount;
 
 		WHILE @@FETCH_STATUS = 0
 			BEGIN
@@ -229,27 +243,29 @@ BEGIN TRY
 										SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
 							
 										IF @partitioncount > 1
-											SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
+											SELECT @Command = @Command + ' PARTITION=' + RTRIM( CONVERT (CHAR, @partitionnum));
 										
 										IF @type_desc not like '%columnstore%'
 										SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
 							
-									END
-						
+									END 
+
+								--If greater than 50% frag, instead consider ONLINE Rebuild, falling back to a REORG (or, to an offline rebuild, commented out by default.)
+								--Both REBUILD ONLINE and REORG are considered "online" operations. By default, ONLINE operations only.
 								IF @frag >= 50.0
 									BEGIN
 							
-										--Doing an INDEX REBUILD with ONLINE = ON reduces the impact of locking to the production server, 
+										--  INDEX REBUILD with ONLINE = ON reduces the impact of locking to the production server, 
 										--	though it will still create resource contention by keeping the drives and tempdb busy.
 										--  Unlike REORGANIZE steps, a REBUILD also updates the STATISTICS of an index.
 										IF @Can_RebuildOnline = 1 and @type_desc not like '%columnstore%'
 										BEGIN
-											IF @TestMode = 1 print '--60%+ rebuild online'
+											IF @TestMode = 1 print '--50%+ rebuild online'
 							
 											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REBUILD ';
 								
 											IF @partitioncount > 1
-												SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
+												SELECT @Command = @Command + ' PARTITION=' + RTRIM(CONVERT (CHAR, @partitionnum))
 									
 											SELECT @Command = @Command + ' WITH (ONLINE = ON'
 								
@@ -263,12 +279,12 @@ BEGIN TRY
 										ELSE IF @Can_Reorg = 1
 										BEGIN
 							
-											IF @TestMode = 1 print '--60%+ reorg'
+											IF @TestMode = 1 print '--50%+ reorg'
 							
 											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
 								
 											IF @partitioncount > 1
-												SELECT @Command = @Command + ' PARTITION=' + CONVERT (CHAR, @partitionnum);
+												SELECT @Command = @Command + ' PARTITION=' + RTRIM( CONVERT (CHAR, @partitionnum))
 								
 											IF @type_desc not like '%columnstore%'
 											SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
@@ -295,13 +311,14 @@ BEGIN TRY
 									SELECT DB_NAME(), @Command, '[' + DB_Name() + '].[' + @SchemaName + '].[' + @ObjectName + ']', sysdatetimeoffset(), @StartWindow, @EndWindow, @TestMode
 									
 									SELECT @Command = 'SET QUOTED_IDENTIFIER ON;
-									' + @Command --for a specific issue that can cause some rebuild operations to fail if this is OFF. ON is default.
+																' + @Command --for a specific issue that can cause some rebuild operations to fail if this is OFF. Force it ON, even though it is ON by default.
 									
 									BEGIN TRY 
 										IF @TestMode = 0 EXEC (@Command);
 
 										IF @TestMode = 1 print N'--Executed: 
-										' + @Command + ' Frag level: ' + cast(@frag as varchar(10))
+																' + @Command + ' --Frag level: ' + cast(@frag as varchar(10));
+
 										UPDATE DBALogging.dbo.IndexMaintLog 
 										SET EndTimeStamp = sysdatetimeoffset()
 										,	Duration_s = datediff(s, BeginTimeStamp, sysdatetimeoffset())
@@ -310,6 +327,7 @@ BEGIN TRY
 									END TRY 
 									BEGIN CATCH
 										IF @TestMode = 1 print N'--Error: ' + ERROR_MESSAGE()
+
 										UPDATE DBALogging.dbo.IndexMaintLog 
 										SET ErrorMessage = cast(ERROR_NUMBER() as varchar(9)) + ' ' + ERROR_MESSAGE()
 										where id = SCOPE_IDENTITY() and EndTimeStamp is null
@@ -325,7 +343,7 @@ BEGIN TRY
 				END CATCH
 
 			FETCH NEXT FROM curIndexPartitions 
-				INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname, @type_desc;
+				INTO @objectid, @indexid, @partitionnum, @frag, @Can_Reorg, @Can_RebuildOnline, @Can_Compress, @indexname, @type_desc, @partitioncount;
 			END
 
 		-- Close and deallocate the cursor.
@@ -358,9 +376,9 @@ BEGIN TRY
 			OR
 			@TestMode = 1
 		BEGIN
-			declare @tsqllist table (id int not null identity(1,1) primary key, SchemaName sysname, ObjectName sysname, tsqltext nvarchar(4000) not null) 
+			declare @tsqllist table (id int not null identity(1,1) primary key, SchemaName sysname, ObjectName sysname, tsqltext nvarchar(4000) not null, modification_counter int not null, [rows] int not null) 
 			
-			insert into @tsqllist ( SchemaName, ObjectName, tsqltext) 
+			insert into @tsqllist ( SchemaName, ObjectName, tsqltext, modification_counter, [rows]) 
 			SELECT distinct
 					  s.name AS SchemaName 
 					, o.name AS ObjectName 
@@ -373,10 +391,12 @@ BEGIN TRY
 									STA.is_incremental = 1 and  --Only works in SQL 2014+, comment out this line in prior versions.
 									MAX(p.partition_number) OVER (PARTITION by STA.name, i.name)  > 1 THEN ' ON PARTITIONS (' + cast(p.partition_number as varchar(5)) + ') ' ELSE '' END
 								END
-							+ '--Pct updated ' + ISNULL(convert(varchar(50), round((convert(decimal(19,2), sp.modification_counter)/sp.[rows]),2)),'') + ', Last Updated ' + ISNULL(convert(varchar(30), sp.last_updated),'')
+							+	CASE WHEN @TestMode = 1 THEN '--Pct updated ' + ISNULL(convert(varchar(50), convert(decimal(19,2), sp.modification_counter/sp.[rows])),'') + ', Last Updated ' + ISNULL(convert(varchar(30), sp.last_updated),'') ELSE '' END
+							
+					, sp.modification_counter, sp.[rows]
 			   FROM sys.objects  o   
 					 INNER JOIN sys.stats STA ON STA.object_id = o.object_id  
-						CROSS APPLY sys.dm_db_stats_properties (STA.object_id, STA.stats_id) sp -- Only works in SQL2008R2SP2+ or SQL2012SP1+
+					 CROSS APPLY sys.dm_db_stats_properties (STA.object_id, STA.stats_id) sp -- Only works in SQL2008R2SP2+ or SQL2012SP1+
 					 INNER JOIN sys.schemas AS s 
 						 ON o.schema_id = s.schema_id 
 					 LEFT OUTER JOIN sys.indexes as i
@@ -412,11 +432,12 @@ BEGIN TRY
 								AND 
 									((sp.modification_counter*1./sp.[rows]) > .3 --changes equal 30% of rows, an arbitrary line to cross
 									or modification_counter > 50000
-									)
-								
+									) 
 							)	
 						)
 				OPTION (MAXDOP 1);
+
+			IF @TestMode = 1 select * from @tsqllist;
 
 			declare @s int = 1, @scount int = null, @runtsql nvarchar(4000) = null
 			select @scount = max(id) from @tsqllist l
@@ -431,8 +452,7 @@ BEGIN TRY
 						AND (	@currenthour >= @StartWindow 
 							OR	(@currenthour <= @StartWindow 
 							AND @currenthour < @EndWindow)
-							)
-
+							) 
 						)
 						OR 
 						(@StartWindow <= @EndWindow -- AM only or PM only
@@ -512,7 +532,11 @@ BEGIN TRY
 			THROW 51000, @errormessage,0; --This is the only error that will rise to the SQL Agent Job.
 		END
 	
+	IF @TestMode = 1 print '--Done'
 GO
+
+
+
 
 /*
 DROP TABLE DBALogging.dbo.IndexMaintLog;
