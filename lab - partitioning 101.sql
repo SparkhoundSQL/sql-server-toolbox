@@ -1,4 +1,4 @@
-use w
+use testdb
 go
 
 DROP TABLE IF EXISTS  dbo.HorizontalPartitionTable
@@ -144,3 +144,6 @@ select object_name(object_id), partition_number, rows from sys.partitions where 
 select object_name(object_id), partition_number, rows from sys.partitions where object_id = object_id('HorizontalPartitionTable_Stage') and index_id = 1 order by partition_number
 select object_name(object_id), partition_number, rows from sys.partitions where object_id = object_id('HorizontalPartitionTable_Dump') and index_id = 1 order by partition_number
 
+drop table test 
+create table test (id int not null primary key)
+insert into test (id) values  (1),(2)
