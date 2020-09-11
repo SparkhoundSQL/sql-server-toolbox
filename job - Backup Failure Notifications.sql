@@ -6,216 +6,229 @@ USE [DBALogging]
 GO  
 
 CREATE PROCEDURE [dbo].[BackupFailureNotification] 
-as
--- Version# July 2020 Rev01
---	  @database_name nvarchar(512)
---	, @backuptype nvarchar(50)
---	, @recovery_model_desc nvarchar(50)
---	, @LatestBackupDate datetime2
---	, @LatestBackupLocation nvarchar(512)
---	, @state_desc nvarchar(50)
---AS
---BEGIN TRY
---BEGIN TRANSACTION
---	 DECLARE @MyDatabaseName nvarchar(512)
---	 DECLARE @MyBackupType nvarchar(50)
---	 DECLARE @MyRecoveryModelDesc nvarchar(50)
---	 DECLARE @MyLatestBackupDate datetime2
---	 DECLARE @MyLatestBackupLocation nvarchar(512)
---	 DECLARE @MyStateDesc nvarchar(50)
+	as
+	-- Version# Sept 2020 Rev01
+	--	  @database_name nvarchar(512)
+	--	, @backuptype nvarchar(50)
+	--	, @recovery_model_desc nvarchar(50)
+	--	, @LatestBackupDate datetime2
+	--	, @LatestBackupLocation nvarchar(512)
+	--	, @state_desc nvarchar(50)
+	--AS
+	--BEGIN TRY
+	--BEGIN TRANSACTION
+	--	 DECLARE @MyDatabaseName nvarchar(512)
+	--	 DECLARE @MyBackupType nvarchar(50)
+	--	 DECLARE @MyRecoveryModelDesc nvarchar(50)
+	--	 DECLARE @MyLatestBackupDate datetime2
+	--	 DECLARE @MyLatestBackupLocation nvarchar(512)
+	--	 DECLARE @MyStateDesc nvarchar(50)
 
---	 SET @MyDatabaseName = @database_name 
---	 SET @MyBackupType = @backuptype 
---	 SET @MyRecoveryModelDesc = @recovery_model_desc 
---	 SET @MyLatestBackupDate = @LatestBackupDate 
---	 SET @MyLatestBackupLocation = @LatestBackupLocation 
---	 SET @MyStateDesc = @state_desc 
-IF OBJECT_ID('tempdb..#BackupFailureFULL') IS NOT NULL
-    BEGIN
-	   DROP TABLE #BackupFailureFULL;
-    END;
+	--	 SET @MyDatabaseName = @database_name 
+	--	 SET @MyBackupType = @backuptype 
+	--	 SET @MyRecoveryModelDesc = @recovery_model_desc 
+	--	 SET @MyLatestBackupDate = @LatestBackupDate 
+	--	 SET @MyLatestBackupLocation = @LatestBackupLocation 
+	--	 SET @MyStateDesc = @state_desc 
+	IF OBJECT_ID('tempdb..#BackupFailureFULL') IS NOT NULL
+		BEGIN
+		   DROP TABLE #BackupFailureFULL;
+		END;
 
-IF OBJECT_ID('tempdb..#RecentFailover') IS NOT NULL
-    BEGIN
-	   DROP TABLE #RecentFailover;
-    END;
+	IF OBJECT_ID('tempdb..#RecentFailover') IS NOT NULL
+		BEGIN
+		   DROP TABLE #RecentFailover;
+		END;
 
-DECLARE @FileName NVARCHAR(4000)
-SELECT @FileName = target_data.value('(EventFileTarget/File/@name)[1]', 'nvarchar(4000)')
-    FROM (
-           SELECT CAST(target_data AS XML) target_data
-            FROM sys.dm_xe_sessions s
-            JOIN sys.dm_xe_session_targets t
-                ON s.address = t.event_session_address
-            WHERE s.name = N'AlwaysOn_health'
-         ) ft;
+	DECLARE @FileName NVARCHAR(4000)
+	SELECT @FileName = target_data.value('(EventFileTarget/File/@name)[1]', 'nvarchar(4000)')
+		FROM (
+			   SELECT CAST(target_data AS XML) target_data
+				FROM sys.dm_xe_sessions s
+				JOIN sys.dm_xe_session_targets t
+					ON s.address = t.event_session_address
+				WHERE s.name = N'AlwaysOn_health' and target_name = 'event_file'
+			 ) ft;
+	--Just pass in the system_health file if AlwaysOn_health doesn't exist. Need a file for the CTE next.
+	IF @FileName is null
+	SELECT @FileName = target_data.value('(EventFileTarget/File/@name)[1]', 'nvarchar(4000)')
+		FROM (
+			   SELECT CAST(target_data AS XML) target_data
+				FROM sys.dm_xe_sessions s
+				JOIN sys.dm_xe_session_targets t
+					ON s.address = t.event_session_address
+				WHERE s.name = N'system_health' and target_name = 'event_file'
+			 ) ft;
 
-WITH    base
-          AS (
-               SELECT XEData.value('(event/@timestamp)[1]', 'datetime2(3)') AS event_timestamp
-                   ,XEData.value('(event/data/text)[1]', 'VARCHAR(255)') AS previous_state
-                   ,XEData.value('(event/data/text)[2]', 'VARCHAR(255)') AS current_state
-				   ,XEData.value('(event/data)[3]', 'VARCHAR(255)') AS availability_group_id
-				   ,XEData.value('(event/data)[4]', 'VARCHAR(255)') AS availability_group_name
-				   ,XEData.value('(event/data)[5]', 'VARCHAR(255)') AS availability_replica_id
-				   ,XEData.value('(event/data)[6]', 'VARCHAR(255)') AS availability_replica_name
-                   ,ar.replica_server_name
-                FROM (
-                       SELECT CAST(event_data AS XML) XEData
-                           ,*
-                        FROM sys.fn_xe_file_target_read_file(@FileName, NULL, NULL, NULL)
-                        WHERE object_name = 'availability_replica_state_change'
-                     ) event_data
-                JOIN sys.availability_replicas ar
-                    ON ar.replica_id = XEData.value('(event/data/value)[5]', 'VARCHAR(255)')
-             )
+	WITH    base
+			  AS (
+				   SELECT XEData.value('(event/@timestamp)[1]', 'datetime2(3)') AS event_timestamp
+					   ,XEData.value('(event/data/text)[1]', 'VARCHAR(255)') AS previous_state
+					   ,XEData.value('(event/data/text)[2]', 'VARCHAR(255)') AS current_state
+					   ,XEData.value('(event/data)[3]', 'VARCHAR(255)') AS availability_group_id
+					   ,XEData.value('(event/data)[4]', 'VARCHAR(255)') AS availability_group_name
+					   ,XEData.value('(event/data)[5]', 'VARCHAR(255)') AS availability_replica_id
+					   ,XEData.value('(event/data)[6]', 'VARCHAR(255)') AS availability_replica_name
+					   ,ar.replica_server_name
+					FROM (
+						   SELECT CAST(event_data AS XML) XEData
+							   ,*
+							FROM sys.fn_xe_file_target_read_file(@FileName, NULL, NULL, NULL)
+							WHERE object_name = 'availability_replica_state_change'
+						 ) event_data
+					JOIN sys.availability_replicas ar
+						ON ar.replica_id = XEData.value('(event/data/value)[5]', 'VARCHAR(255)')
+				 )
 
-		SELECT availability_replica_id 
-		INTO #RecentFailover
-		FROM base 
-		Where event_timestamp > DATEADD (DAY, -1, getdate())
-		and previous_state ='SECONDARY_NORMAL'
-		and current_state = 'RESOLVING_PENDING_FAILOVER'
-        ORDER BY event_timestamp DESC;
+			SELECT availability_replica_id 
+			INTO #RecentFailover
+			FROM base 
+			Where event_timestamp > DATEADD (DAY, -1, getdate())
+			and previous_state ='SECONDARY_NORMAL'
+			and current_state = 'RESOLVING_PENDING_FAILOVER'
+			ORDER BY event_timestamp DESC;
 
-DECLARE @TimeStampFULL datetime2 = GETDATE()
-SELECT  
-	  a.database_name
-	, a.backuptype
-	, d.recovery_model_desc
-	, LatestBackupDate = max(a.BackupFinishDate)
-	, LatestBackupLocation = max(a.physical_device_name)
-	, d.state_desc
-into #BackupFailureFULL
- from sys.databases d
- inner join (	select * from (
-						select  
-						  database_name
-						, backuptype = case type	WHEN 'D' then 'Database'
-												WHEN 'I' then 'Differential database'
-												WHEN 'L' then 'Transaction Log'
-												WHEN 'F' then 'File or filegroup'
-												WHEN 'G' then 'Differential file'
-												WHEN 'P' then 'Partial'
-												WHEN 'Q' then 'Differential partial' END
-						, BackupFinishDate	=	backup_finish_date
-						, BackupStartDate = backup_start_date
-						, physical_device_name 
-						, latest = Row_number() OVER (PARTITION BY database_name, type order by backup_finish_date desc)
-						, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (database_name)
+	DECLARE @TimeStampFULL datetime2 = GETDATE()
+	SELECT  
+		  a.database_name
+		, a.backuptype
+		, d.recovery_model_desc
+		, LatestBackupDate = max(a.BackupFinishDate)
+		, LatestBackupLocation = max(a.physical_device_name)
+		, d.state_desc
+	into #BackupFailureFULL
+	 from sys.databases d
+	 inner join (	select * from (
+							select  
+							  database_name
+							, backuptype = case type	WHEN 'D' then 'Database'
+													WHEN 'I' then 'Differential database'
+													WHEN 'L' then 'Transaction Log'
+													WHEN 'F' then 'File or filegroup'
+													WHEN 'G' then 'Differential file'
+													WHEN 'P' then 'Partial'
+													WHEN 'Q' then 'Differential partial' END
+							, BackupFinishDate	=	backup_finish_date
+							, BackupStartDate = backup_start_date
+							, physical_device_name 
+							, latest = Row_number() OVER (PARTITION BY database_name, type order by backup_finish_date desc)
+							, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (database_name)
 						
-						from msdb.dbo.backupset bs					
-						left outer join msdb.dbo.[backupmediafamily] bf
-						on bs.[media_set_id] = bf.[media_set_id]	
-						WHERE backup_finish_date is not null 
-						group by  database_name, backup_finish_date, backup_start_date, physical_device_name, type
-						) x
-						where latest = 1
-					 UNION 
-					 select 
-						db_name(d.database_id)
-						, backuptype = 'Database'
-						, null, null, null, null, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (db_name(d.database_id))
+							from msdb.dbo.backupset bs					
+							left outer join msdb.dbo.[backupmediafamily] bf
+							on bs.[media_set_id] = bf.[media_set_id]	
+							WHERE backup_finish_date is not null 
+							group by  database_name, backup_finish_date, backup_start_date, physical_device_name, type
+							) x
+							where latest = 1
+						 UNION 
+						 select 
+							db_name(d.database_id)
+							, backuptype = 'Database'
+							, null, null, null, null, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (db_name(d.database_id))
 						
-						FROM master.sys.databases d
-						group by db_name(d.database_id)
-					 UNION
-					 select 
-						db_name(d.database_id)
-						, backuptype = 'Transaction Log'
-						, null, null, null, null, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (db_name(d.database_id))
+							FROM master.sys.databases d
+							group by db_name(d.database_id)
+						 UNION
+						 select 
+							db_name(d.database_id)
+							, backuptype = 'Transaction Log'
+							, null, null, null, null, fn_hadr_backup_is_preferred_replica  = sys.fn_hadr_backup_is_preferred_replica (db_name(d.database_id))
 						
-					  FROM master.sys.databases d
-					  where d.recovery_model_desc in ('FULL', 'BULK_LOGGED')
-					  group by db_name(d.database_id)
- ) a
- on db_name(d.database_id) = a.database_name
- WHERE a.database_name not in ('tempdb', 'model') 
- and a.database_name not in (Select name From sys.databases where replica_id in (select availability_replica_id from #RecentFailover))
- and d.state_desc ='ONLINE' 
- AND (		(backuptype <> 'Transaction Log' and d.recovery_model_desc = 'SIMPLE')
-		OR	(d.recovery_model_desc <> 'SIMPLE')
-	)
- and (d.create_date > ( DATEADD(DAY, 1, GETDATE()))) --TODO: change DATEADD value based on client's full backup interval
- and  (d.replica_id IS Null --not in an Ag
-		or
-			--Select for AG databases that are prefered replicas that fit the criteria for a gap in backup history
-(d.replica_id IS Not Null  and  a.fn_hadr_backup_is_preferred_replica = 1) 
-			)
-group by 
-	  a.database_name
-	, a.backuptype 
-	, d.recovery_model_desc
-	, d.state_desc
-HAVING (MAX(a.BackupFinishDate) < DATEADD(DAY, -7, @TimeStampFULL) and backuptype = 'Database')
-		OR ((MAX(a.BackupFinishDate) IS NULL and backuptype = 'Database') OR (MAX(a.BackupFinishDate) < DATEADD(HOUR, -2, @TimeStampFULL) and backuptype = 'Transaction Log'))
-		OR (MAX(a.BackupFinishDate) IS NULL and backuptype = 'Transaction Log')
-order by a.backuptype, d.recovery_model_desc, a.database_name asc;
+						  FROM master.sys.databases d
+						  where d.recovery_model_desc in ('FULL', 'BULK_LOGGED')
+						  group by db_name(d.database_id)
+	 ) a
+	 on db_name(d.database_id) = a.database_name
+	 WHERE a.database_name not in ('tempdb', 'model') 
+	 and a.database_name not in (Select name From sys.databases where replica_id in (select availability_replica_id from #RecentFailover))
+	 and d.state_desc ='ONLINE' 
+	 AND (		(backuptype <> 'Transaction Log' and d.recovery_model_desc = 'SIMPLE')
+			OR	(d.recovery_model_desc <> 'SIMPLE')
+		)
+	 and (d.create_date > ( DATEADD(DAY, 1, GETDATE()))) --TODO: change DATEADD value based on client's full backup interval
+	 and  (d.replica_id IS Null --not in an Ag
+			or
+				--Select for AG databases that are prefered replicas that fit the criteria for a gap in backup history
+	(d.replica_id IS Not Null  and  a.fn_hadr_backup_is_preferred_replica = 1) 
+				)
+	group by 
+		  a.database_name
+		, a.backuptype 
+		, d.recovery_model_desc
+		, d.state_desc
+	HAVING (MAX(a.BackupFinishDate) < DATEADD(DAY, -7, @TimeStampFULL) and backuptype = 'Database')
+			OR ((MAX(a.BackupFinishDate) IS NULL and backuptype = 'Database') OR (MAX(a.BackupFinishDate) < DATEADD(HOUR, -2, @TimeStampFULL) and backuptype = 'Transaction Log'))
+			OR (MAX(a.BackupFinishDate) IS NULL and backuptype = 'Transaction Log')
+	order by a.backuptype, d.recovery_model_desc, a.database_name asc;
 
 
-if (SELECT COUNT(*) FROM #BackupFailureFULL
-) > 0
-BEGIN 
-	DECLARE @tableData  NVARCHAR(MAX) ;
-	DECLARE @tableLog  NVARCHAR(MAX) ;    
+	if (SELECT COUNT(*) FROM #BackupFailureFULL
+	) > 0
+	BEGIN 
+		DECLARE @tableData  NVARCHAR(MAX) ;
+		DECLARE @tableLog  NVARCHAR(MAX) ;    
   
-	SET @tableData =  
-		N'<H3><P>Full Backups (databases without backups in the last 7 days): <P></H3>' +  
-		N'<table border="1">' +  
-		N'<tr><th>Database </th><th>LatestBackup </th>' +  
-		N'<th>RecoveryModel </th><th>BackupType </th>' +  
-		CAST ( ( SELECT
-				 td = b.database_name ,  ' ',
-				 td = ISNULL(b.LatestBackupDate, 0000-00-00),  ' ',
-				 td = b.recovery_model_desc  , ' ',
-				 td = b.backuptype  
-				from #BackupFailureFULL b
-				where b.backuptype = 'Database'
-				order by b.backuptype, b.LatestBackupDate 
-				  FOR XML PATH('tr'), TYPE   
-		) AS NVARCHAR(MAX) ) +  
-		N'</table>' ;  
+		SET @tableData =  
+			N'<H3><P>Full Backups (databases without backups in the last 7 days): <P></H3>' +  
+			N'<table border="1">' +  
+			N'<tr><th>Database </th><th>LatestBackup </th>' +  
+			N'<th>RecoveryModel </th><th>BackupType </th>' +  
+			CAST ( ( SELECT
+					 td = b.database_name ,  ' ',
+					 td = ISNULL(b.LatestBackupDate, 0000-00-00),  ' ',
+					 td = b.recovery_model_desc  , ' ',
+					 td = b.backuptype  
+					from #BackupFailureFULL b
+					where b.backuptype = 'Database'
+					order by b.backuptype, b.LatestBackupDate 
+					  FOR XML PATH('tr'), TYPE   
+			) AS NVARCHAR(MAX) ) +  
+			N'</table>' ;  
 
-	SET @tableLog =  
-		N'<H3><P>Transaction Log Backups (databases without Transaction Log Backups in the last 2 hours): <P></H3>' +  
-		N'<table border="1">' +  
-		N'<tr><th>Database </th><th>LatestBackup </th>' +  
-		N'<th>RecoveryModel </th><th>BackupType </th>' +  
-		CAST ( ( SELECT
-				 td = b.database_name ,  ' ',
-				 td = ISNULL(b.LatestBackupDate, 0000-00-00),  ' ',
-				 td = b.recovery_model_desc  , ' ',
-				 td = b.backuptype  
-				from #BackupFailureFULL b
-				where b.backuptype = 'Transaction Log'
-				order by b.backuptype, b.LatestBackupDate 
-				  FOR XML PATH('tr'), TYPE   
-		) AS NVARCHAR(MAX) ) +  
-		N'</table>' ;  
+		SET @tableLog =  
+			N'<H3><P>Transaction Log Backups (databases without Transaction Log Backups in the last 2 hours): <P></H3>' +  
+			N'<table border="1">' +  
+			N'<tr><th>Database </th><th>LatestBackup </th>' +  
+			N'<th>RecoveryModel </th><th>BackupType </th>' +  
+			CAST ( ( SELECT
+					 td = b.database_name ,  ' ',
+					 td = ISNULL(b.LatestBackupDate, 0000-00-00),  ' ',
+					 td = b.recovery_model_desc  , ' ',
+					 td = b.backuptype  
+					from #BackupFailureFULL b
+					where b.backuptype = 'Transaction Log'
+					order by b.backuptype, b.LatestBackupDate 
+					  FOR XML PATH('tr'), TYPE   
+			) AS NVARCHAR(MAX) ) +  
+			N'</table>' ;  
 	
-	BEGIN
+		BEGIN
 	
-	SET @tablelog = '<h4><p>Local server time ' + convert(varchar(50), SYSDATETIMEOFFSET()) + '</p></h4>
-		' + @tablelog 
-	declare @nBody nvarchar(max)
-	declare @nServer nvarchar(max)
-	SET @nBody = CASE 
-						WHEN (SELECT COUNT(*) FROM #BackupFailureFULL WHERE backuptype = 'Database') = 0 THEN 'The following databases have recently missed backups and should be investigated:' + @tableLog
-						WHEN (SELECT COUNT(*) FROM #BackupFailureFULL WHERE backuptype = 'Transaction Log') = 0 THEN 'The following databases have recently missed backups and should be investigated:' + @tableData
-				 ELSE 'The following databases have recently missed backups and should be investigated:
-				 <P>' + @tableData + @tableLog END
-	SET @nServer = 'Backup Failure on ' + @@SERVERNAME
-		EXEC msdb.dbo.sp_send_dbmail 
-		   @profile_name  = 'profilename' , --TODO: change profile_name and recipinets below, per server
-		   @recipients = 'sql.alerts@sparkhound.com', 
-		   @body =  @nBody,
-		   @body_format ='HTML',
-		   @subject = @nServer ;  
+		SET @tablelog = '<h4><p>Local server time ' + convert(varchar(50), SYSDATETIMEOFFSET()) + '</p></h4>
+			' + @tablelog 
+		declare @nBody nvarchar(max)
+		declare @nServer nvarchar(max)
+		SET @nBody = CASE 
+							WHEN (SELECT COUNT(*) FROM #BackupFailureFULL WHERE backuptype = 'Database') = 0 THEN 'The following databases have recently missed backups and should be investigated:' + @tableLog
+							WHEN (SELECT COUNT(*) FROM #BackupFailureFULL WHERE backuptype = 'Transaction Log') = 0 THEN 'The following databases have recently missed backups and should be investigated:' + @tableData
+					 ELSE 'The following databases have recently missed backups and should be investigated:
+					 <P>' + @tableData + @tableLog END
 
-	END
-	END
-;
+		print @nbody
+		SET @nServer = 'Backup Failure on ' + @@SERVERNAME
+			EXEC msdb.dbo.sp_send_dbmail 
+			   @profile_name  = @@SERVERNAME , --TODO: change profile_name and recipinets below, per server
+			   @recipients = 'sql.alerts@sparkhound.com', 
+			   @body =  @nBody,
+			   @body_format ='HTML',
+			   @subject = @nServer ;  
+
+		END
+		END
+	;
 GO 
+
 --exec dbo.BackupFailureNotification
 
 
