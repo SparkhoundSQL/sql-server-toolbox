@@ -2,7 +2,7 @@
 
 	PRINT 'start ' + cast(sysdatetime() as varchar(20))
 	DECLARE @showallspids bit, @showinternalgroup bit 
-	SELECT	@showallspids = 0-- 1= show all sessions, 0= show only active requests
+	SELECT	@showallspids = 1-- 1= show all sessions, 0= show only active requests
 		,	@showinternalgroup = 0	-- 1= show internal sessions, 0= ignore internal sessions based on RG group_id
 									-- The @showinternalgroup flag does NOT work for Standard edition because all queries show in the same Resource Group
 	
@@ -50,7 +50,7 @@
 	LEFT OUTER JOIN sys.dm_exec_requests r on r.session_id = s.session_id
 	WHERE 1=1
 	and s.session_id >= 50 --retrieve only user spids
-	and s.session_id <> @@SPID --ignore myself
+	--and s.session_id <> @@SPID --ignore myself
 	and		(@showallspids = 1 or r.session_id is not null) 
 	and		(@showinternalgroup = 1 or s.Group_Id > 1);
 
@@ -98,6 +98,7 @@
 															ELSE r.statement_end_offset/2 - r.statement_start_offset/2 + 1
 														END	)
 							END
+		, Input_Buffer_Text_Event_Info	= ib.event_info 
 		, cacheobjtype	=	LEFT (p.cacheobjtype + ' (' + p.objtype + ')', 35)
 		, QueryPlan		=	qp.query_plan	
 		, request_transaction_isolation_level	=	case request_transaction_isolation_level 
@@ -133,7 +134,9 @@
 													and r.statement_end_offset = stat.statement_end_offset
 		LEFT OUTER JOIN sys.resource_governor_workload_groups  wg on wg.group_id = r.Governor_Group_Id
 		LEFT OUTER JOIN sys.resource_governor_resource_pools wp on wp.pool_id = wg.Pool_id
+		CROSS APPLY sys.dm_exec_input_buffer(r.session_id, r.request_id) AS ib
 	) a
+	
 	ORDER BY len(blocking_these) - len(replace(blocking_these,',','')) desc, blocking_these desc, blocked_by desc, session_id
 
 	PRINT 'done ' + cast(sysdatetime() as varchar(20))
