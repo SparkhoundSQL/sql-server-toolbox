@@ -243,7 +243,7 @@ BEGIN TRY
 										SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
 							
 										IF @partitioncount > 1
-											SELECT @Command = @Command + ' PARTITION=' + RTRIM( CONVERT (CHAR, @partitionnum));
+											SELECT @Command = @Command + ' PARTITION=' + RTRIM( CONVERT (VARCHAR(5), @partitionnum));
 										
 										IF @type_desc not like '%columnstore%'
 										SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
@@ -265,7 +265,7 @@ BEGIN TRY
 											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REBUILD ';
 								
 											IF @partitioncount > 1
-												SELECT @Command = @Command + ' PARTITION=' + RTRIM(CONVERT (CHAR, @partitionnum))
+												SELECT @Command = @Command + ' PARTITION=' + RTRIM(CONVERT (VARCHAR(5), @partitionnum))
 									
 											SELECT @Command = @Command + ' WITH (ONLINE = ON'
 								
@@ -284,7 +284,7 @@ BEGIN TRY
 											SELECT @Command = 'ALTER INDEX [' + @indexname +'] ON [' + @SchemaName + '].[' + @ObjectName + '] REORGANIZE ';
 								
 											IF @partitioncount > 1
-												SELECT @Command = @Command + ' PARTITION=' + RTRIM( CONVERT (CHAR, @partitionnum))
+												SELECT @Command = @Command + ' PARTITION=' + RTRIM( CONVERT (VARCHAR(5), @partitionnum))
 								
 											IF @type_desc not like '%columnstore%'
 											SELECT @Command = @Command + '; UPDATE STATISTICS [' + @SchemaName + '].[' + @ObjectName + '] ([' + @indexname + ']); '
@@ -298,7 +298,7 @@ BEGIN TRY
 										--	IF @TestMode = 1 print '--60%+ rebuild offline!'
 										--	SELECT @Command = 'ALTER INDEX [' + @indexname + '] ON [' + @SchemaName + '.' + @ObjectName + '] REBUILD';
 										--	IF @partitioncount > 1
-										--		SELECT @Command = @Command + ' PARTITION = ' + CONVERT (CHAR, @partitionnum);
+										--		SELECT @Command = @Command + ' PARTITION = ' + CONVERT (VARCHAR(5), @partitionnum);
 										--	SELECT @Command = @Command + ' WITH ('
 										--	IF @Can_Compress = 1						
 										--		SELECT @Command = @Command + ' DATA_COMPRESSION = PAGE, '
