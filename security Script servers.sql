@@ -70,6 +70,7 @@ SELECT
    Permission_State  =  rm.state_desc
 ,  Permission  =  rm.permission_name
 ,  Principal_name  =  QUOTENAME(u.name)
+,  Grantor_name		= QUOTENAME(ur.name)
 ,  Principal_type  =  u.type_desc
 ,  CreateTSQL_Source = rm.state_desc + N' ' + rm.permission_name + 
 	CASE WHEN e.name is not null THEN 'ON ENDPOINT::[' + e.name + '] ' ELSE '' END +
@@ -78,6 +79,8 @@ SELECT
 	CASE WHEN e.name is not null THEN 'ON ENDPOINT::[' + e.name + '] ' ELSE '' END +
 	 N' TO ' + cast(QUOTENAME(u.name COLLATE DATABASE_DEFAULT) as nvarchar(256)) + ';', *
 FROM sys.server_permissions rm
+inner join sys.server_principals ur 
+on rm.grantee_principal_id = ur.principal_id
 inner join sys.server_principals u 
 on rm.grantee_principal_id = u.principal_id
 left outer join sys.endpoints e
