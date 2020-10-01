@@ -44,9 +44,10 @@ WHERE s.database_id = db_id() and s.session_id <> @@SPID
 
 /*
 --Optional, insert into table.
+DROP TABLE IF EXISTS [dbo].[uncommitted_transactions]
 CREATE TABLE [dbo].[uncommitted_transactions](
 	ID INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_uncommitted_transactions PRIMARY KEY,
-	[Observed] [datetimeoffset](7) NOT NULL,
+	[Observed] [datetimeoffset](7) NOT NULL INDEX IDX_uncommitted_transactions_Observed,
 	[transaction_id] [bigint] NOT NULL,
 	[transaction_begin_time] [datetime] NOT NULL,
 	[session_id] [int] NOT NULL,
