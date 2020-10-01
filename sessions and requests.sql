@@ -5,7 +5,7 @@
 	select	@showallspids = 1-- 1= show all sessions, 0= show only active requests
 		,	@showinternalgroup = 1 -- 1= show internal sessions, 0= ignore internal sessions based on RG group_id
 	;								-- The @showinternalgroup flag does NOT work for Standard edition because all queries show in the same Resource Group
-	
+
 	WITH cteSR AS (
 	SELECT s.session_id, r.request_id, request_start_time= r.start_time, s.login_time, s.login_name, s.client_interface_name, session_status = s.status, request_status= r.status,command,sql_handle,statement_start_offset,statement_end_offset,plan_handle,r.database_id,user_id,blocking_session_id,wait_type,r.last_wait_type, wait_time_s = r.wait_time/1000.,r.wait_resource ,cpu_time_s = r.cpu_time/1000.,tot_time_s = r.total_elapsed_time/1000.,r.reads,r.writes,r.logical_reads,percent_complete,estimated_completion_time	,s.[host_name], s.[program_name], session_transaction_isolation_level= s.transaction_isolation_level, request_transaction_isolation_level = r.transaction_isolation_level, Governor_Group_Id = s.group_id
 	, EndPointName= E.name, Protocol = E.protocol_desc	  -- this line sql2k16+ and patches of 14 and 12 only
@@ -21,7 +21,7 @@
 	cteBL (session_id, blocking_these) AS 
 	(		select sr.session_id, blocking_these = x.blocking_these 
 			from cteSR as sr cross apply
-				(select isnull(convert(varchar(5), sr.session_id),'') + ', '  
+				(select isnull(convert(varchar(5), er.session_id),'') + ', '  
 										from cteSR as er
 										where er.blocking_session_id = isnull(sr.session_id ,0)
 										and er.blocking_session_id <> 0
