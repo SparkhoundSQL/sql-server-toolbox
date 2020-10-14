@@ -156,6 +156,11 @@ and LogMessageText not like ''The SQL Server Network Interface library could not
 
 and LogMessageText not like ''Machine supports memory error recovery. SQL memory protection is enabled to recover from memory corruption.''
 
+and LogMessageText not like ''The state of the local availability replica%''
+and LogMessageText not like ''Error: 35262%'' --informational only
+and LogMessageText not like ''Error: 41145%'' --informational only
+
+
 )
 order by LogDate
 
