@@ -24,7 +24,7 @@ go
 /* multi-database
 
 exec sp_MSforeachdb N'use [?];
-Select [?]=	''?'', 	''ALTER USER ['' + dp.name + ''] WITH LOGIN = ['' + dp.name + '']'', *
+Select [?]=	''use [?];'', 	''ALTER USER ['' + dp.name + ''] WITH LOGIN = ['' + dp.name + '']'', *
 	from sys.database_principals dp
 	inner join sys.server_principals sp
 	on dp.name COLLATE SQL_Latin1_General_CP1_CI_AS = sp.name COLLATE SQL_Latin1_General_CP1_CI_AS 
