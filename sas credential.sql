@@ -7,10 +7,10 @@
 --The Secret is the Query String minus the leading ?
 --From the Azure portal, use the Shared Access Signature page of the storage account, "Generate SAS and Connection string", then use the SAS Token minus the leading ?.
 
---drop credential [https://container.blob.core.windows.net/folder/]
+--drop credential [https://container.blob.core.windows.net/folder]
 GO
 
-CREATE CREDENTIAL [https://container.blob.core.windows.net/folder/] --No trailing / 
+CREATE CREDENTIAL [https://container.blob.core.windows.net/folder] --No trailing /, folder name should be included, folder name must not include a hyphen.
 WITH IDENTITY='Shared Access Signature'
 , SECRET='sv=2018-03-28&ss=bfqt&srt=sco&sp=rwdlacup&se=2099-08-19T23:56:04Z&st=2019-08-19T15:56:04Z&spr=https&sig=ZWHPwhateverD'; --this is a sample only
 
