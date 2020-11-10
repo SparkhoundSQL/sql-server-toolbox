@@ -20,7 +20,7 @@ select
 ,	log_reuse_wait
 ,	log_reuse_wait_desc
 ,	target_recovery_time_in_seconds
-,	ProductMajorVersion				= SERVERPROPERTY('ProductMajorVersion')
+,	ProductMajorVersion				= cast(SERVERPROPERTY('ProductMajorVersion') as int)
 ,	is_trustworthy_on
 ,	is_query_store_on --SQL 2016+ only
 into #DBSettings
