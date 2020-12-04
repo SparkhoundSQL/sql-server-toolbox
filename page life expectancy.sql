@@ -15,8 +15,9 @@ select
 							THEN 'Target >= Total. SQL wants more memory than it has, or is building up to that point.'
 							ELSE 'Total >= Target. SQL has enough memory to do what it wants.' END
 FROM 		(SELECT 	InstanceName = @@SERVERNAME  
-					,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
-			FROM sys.dm_os_performance_counters --This only looks at one NUMA node. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
+					,	PLE_s	=	case when object_name like '%Buffer Manager%' and counter_name = 'Page life expectancy'  then cntr_value end  --This only looks at the overall buffer pool, not individual NUMA nodes. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
+			FROM sys.dm_os_performance_counters 
+			WHERE object_name like '%Buffer Manager%' and counter_name = 'Page life expectancy' 
 			)  as p
 cross apply (SELECT		Min_Server_Mem_MB  = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end)
 					,	Max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
