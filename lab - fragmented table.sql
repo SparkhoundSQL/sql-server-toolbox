@@ -1,13 +1,12 @@
-use w
-GO
-
 --RUN ENTIRE SCRIPT
 DROP TABLE IF EXISTS dbo.fragmented_table --new syntax in SQL 2016!
 go
 CREATE TABLE dbo.fragmented_table
 	(
-	fragid uniqueidentifier NOT NULL,
-	fragtext varchar(4000) NOT NULL
+	fragid uniqueidentifier NOT NULL DEFAULT (newid()),
+	fragtext varchar(100) NOT NULL,
+	fragtext2 varchar(100) NOT NULL
+
 	)  
 GO
 ALTER TABLE dbo.fragmented_table ADD CONSTRAINT
@@ -24,19 +23,23 @@ GO
 
 --Insert roughly 131072k records
 
-	insert into dbo.fragmented_table (fragid, fragtext) 
-	select newid(), replicate(char(round(rand()*100,0)),round(rand()*100,0))
+	insert into dbo.fragmented_table ( fragtext, fragtext2) 
+	select  replicate(char(round(rand()*100,0)),round(rand()*100,0)), replicate(char(round(rand()*100,0)),round(rand()*100,0))
 go
 declare @x integer
 set @x = 1 
-while @x < 18
+while @x < 19
 begin
-	insert into dbo.fragmented_table (fragid, fragtext) 
-	select newid(), replicate(char(round(rand()*100,0)),round(rand()*100,0))
+	insert into dbo.fragmented_table ( fragtext, fragtext2) 
+	select replicate(char(round(rand()*100,0)),round(rand()*100,0)), replicate(char(round(rand()*100,0)),round(rand()*100,0))
 	from fragmented_table
 set @x = @x + 1
 end
 go
+
+--Add needle to haystack
+insert into fragmented_table ( fragtext, fragtext2) values ('aaa','bbb')
+
 select count(1) from dbo.fragmented_table
 
 
