@@ -56,11 +56,10 @@ select
 from
 ( select 
 	InstanceName = @@SERVERNAME 
-,	Target_Server_Mem_GB =	max(case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end)
-,	Total_Server_Mem_GB	=	max(case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end) 
-,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
-from sys.dm_os_performance_counters
---This only looks at one NUMA node. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
+,	Target_Server_Mem_GB =	case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end
+,	Total_Server_Mem_GB	=	case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end
+,	PLE_s	= case when object_name = 'Buffer Manager' and counter_name = 'Page life expectancy'  then cntr_value end  --This only looks at the overall buffer pool, not individual NUMA nodes. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
+from sys.dm_os_performance_counters 
 ) as p
 cross apply (SELECT 'InstanceName' = @@SERVERNAME 
 		, cpu_count , hyperthread_ratio AS 'HyperthreadRatio'

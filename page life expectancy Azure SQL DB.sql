@@ -12,16 +12,18 @@ select
 ,	Target_vs_Total = CASE WHEN p.Total_Server_Mem_GB < p.Target_Server_Mem_GB	 
 							THEN 'Target >= Total. SQL wants more memory than it has, or is building up to that point.'
 							ELSE 'Total >= Target. SQL has enough memory to do what it wants.' END
-from(
+from
+(
 select 
 	InstanceName = @@SERVERNAME 
-,	Target_Server_Mem_GB =	max(case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end)
-,	Total_Server_Mem_GB	=	max(case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end) 
-,	PLE_s	=	max(case counter_name when 'Page life expectancy'  then cntr_value end) 
---select * 
+,	Target_Server_Mem_GB = case counter_name when 'Target Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end
+,	Total_Server_Mem_GB	=  case counter_name when  'Total Server Memory (KB)' then convert(decimal(19,3), cntr_value/1024./1024.) end
+,	PLE_s	=	case when object_name like '%Buffer Manager%' and counter_name = 'Page life expectancy'  then cntr_value end --This only looks at the overall buffer pool, not individual NUMA nodes. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
+,* 
 from sys.dm_os_performance_counters
+WHERE counter_name in ('Target Server Memory (KB)','Total Server Memory (KB)') OR (object_name like '%Buffer Manager%' and Counter_name = 'Page life expectancy')
 --This only looks at one NUMA node. https://www.sqlskills.com/blogs/paul/page-life-expectancy-isnt-what-you-think/
-)  as p
+)  as p 
 inner join (select 'InstanceName' = @@SERVERNAME, Version = @@VERSION, 
 			min_Server_Mem_MB  = max(case when name = 'min server memory (MB)' then convert(bigint, value_in_use) end) ,
 			max_Server_Mem_MB = max(case when name = 'max server memory (MB)' then convert(bigint, value_in_use) end) 
