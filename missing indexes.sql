@@ -85,3 +85,25 @@ WHERE 1=1
 order by avg_user_impact * avg_total_user_cost desc 
 
 */
+
+/*
+--Needs Query Store to be enabled and Read/Write
+--Find the latest query text for the top 10 highest anticipated improvements for user queries
+--SQL Server 2019 feature ONLY
+SELECT TOP 10 
+    SUBSTRING
+    (
+            sql_text.text,
+            misq.last_statement_start_offset / 2 + 1,
+            (
+            CASE misq.last_statement_Start_offset
+                WHEN -1 THEN datalength(sql_text.text)
+                ELSE misq.last_statement_end_offset
+            END - misq.last_statement_start_offset
+            ) / 2 + 1
+    ),
+    misq.*
+FROM sys.dm_db_missing_index_group_stats_query AS misq
+CROSS APPLY sys.dm_exec_sql_text(last_sql_handle) AS sql_text
+ORDER BY avg_total_user_cost * avg_user_impact * (user_seeks + user_scans) DESC; 
+*/
